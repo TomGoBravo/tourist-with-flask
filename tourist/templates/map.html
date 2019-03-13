@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+
+
+{% block htmltitle %}UWHT: Map{% endblock %}
+
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+
+{% block headertitle %}Map{% endblock %}
+
+
+{% block content %}
+<div id='map' style="height: 800px; width: 100%" ></div>
+
+
+<script>
+
+function getHashObj()
+{
+    var locationHashUnparsed = location.hash;
+    if (locationHashUnparsed.startsWith("#")) {
+        locationHashUnparsed = locationHashUnparsed.substr(1);
+    }
+    // From https://stackoverflow.com/a/5647103/341400
+    var hashObj = locationHashUnparsed
+        .split("&")
+        .map(v => v.split("="))
+        .reduce( (pre, [key, value]) => ({ ...pre, [key]: value }), {} );
+    return hashObj;
+}
+
+function boundsFromHashObj(hashObj)
+{
+    var north = parseFloat(hashObj.n);
+    var south = parseFloat(hashObj.s);
+    var east = parseFloat(hashObj.e);
+    var west = parseFloat(hashObj.w);
+    if (north > -90 && north < 90
+        && south > -90 && south < 90
+        && east > -180 && east < 180
+        && west > -180 && west < 180
+        && north > south
+        && east > west) {
+        var sw = new mapboxgl.LngLat(west, south);
+        var ne = new mapboxgl.LngLat(east, north);
+        return new mapboxgl.LngLatBounds(sw, ne);
+    }
+}
+
+mapboxgl.accessToken = '{{ mapbox_access_token }}';
+
+
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v9',
+});
+
+// Add geolocate control to the map.
+map.addControl(new mapboxgl.GeolocateControl({
+    positionOptions: {
+        enableHighAccuracy: true
+    },
+}));
+
+map.on('load', function() {
+    var hashObj = getHashObj();
+    var bounds = boundsFromHashObj(hashObj);
+    if (bounds) {
+        var camera = map.cameraForBounds(bounds);
+        map.jumpTo(camera);
+    }
+  map.loadImage('/static/crosssticks60.png', function(error, image) {
+    if (error) throw error;
+    map.addImage('crosssticks', image);
+    map.addLayer({
+      'id': 'poolgeojson',
+      'source': {
+        'type': 'geojson',
+        'data': '/tourist/data/pools.geojson',
+      },
+      'type': 'symbol',
+      'layout': {
+        'icon-image': 'crosssticks',
+        'icon-padding': 0,
+        'icon-size': 0.5,
+        'icon-allow-overlap':true,
+        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+        'text-field': '{title}',
+        'text-optional': true,
+        'text-allow-overlap': false,
+        'text-offset': [0, 0.6],
+        'text-anchor': 'top'
+      }
+    });
+    map.on('click', 'poolgeojson', function (e) {
+        window.location = e.features[0].properties.path;
+    });
+    map.on('mouseenter', 'poolgeojson', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'poolgeojson', function () {
+        map.getCanvas().style.cursor = '';
+    });
+  });
+});
+</script>
+{% endblock %}

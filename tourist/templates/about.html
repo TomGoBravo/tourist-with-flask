@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: About{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}About UWH Tourist{% endblock %}
+
+{% block content %}
+<p>
+Thanks for visiting the Underwater Hockey Tourist website. Did you know that this site has been up and running since '96? Founded by Lisa de Speville in South Africa, the site has been maintained since 2002 by the Houston Underwater Hockey Trust.</p>
+
+<h2>Contribute your knowledge</h2>
+
+<p>
+Please help us help people find your hockey club. Contact us at 2PuckU@GMail.com for access to directly edit the site or with the following information, especially the information with *** next to them!
+
+<ul>
+<li> <b>Country: </b> ***
+<li> <b>Province/State/Region: </b> ***
+<li> <b>City/Town: </b> ***
+<li> <b>Contact Information: </b> *** Please give us a Name AND email and/or telephone;  we will be happy to list any additional contact information you like.  However, we can't list a club unless our visitors can reach you.  Note!  If you give us a contact address that is different from the address of a practice location, please make this clear so that we do not accidentally send strangers to your home expecting an underwater hockey game!
+<li> Club Name:
+<li> Practice locations: For each pool, the name, address and a link to Google Maps works well
+<li> Practice times
+<li> Website, Facebook group, Meetup, etc
+</ul>
+<h2>Here's the old UWH Skills section:</h2>
+<ul>
+<li type=circle><a href="indskil.html">Basic Individual Skills</a> - Roger Kemp
+<li type=circle><a href="fit.html">7-week Fitness Training Program</a> - SA Ladies
+<li type=circle><a href="stickw.html">Essential Stickwork</a> - Mary-Anne Stacey
+<li type=circle><a href="stretch.html">Stretching for UWH</a> - Lisa de Speville
+</ul>
+{% endblock %}
+

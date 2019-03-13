@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Fake Login</title>
+  </head>
+<body>
+
+<ul>
+    {% for username in usernames %}
+        <li><a href="{{ url_for('github.login', username=username) }}">Sign in as {{ username }}</a></li>
+    {% endfor %}
+</ul>
+
+</body>
+</html>

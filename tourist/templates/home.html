@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}Underwater Hockey Tourist{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+<li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+<li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}UWH Tourist{% endblock %}
+
+{% block content %}
+<div class="mui-row">
+
+<div class="mui-col-md-8">
+{% for country in world.child_places|sort(attribute='name') %}
+<a class="mui-btn" href="{{country.path}}">{{country.name}} <i class="material-icons">navigate_next</i></a>
+{% endfor %}
+</div>
+
+
+
+<div class="mui-col-md-4">
+<a href="/tourist/map">
+    <div id='map' style="height: 200px; width: 100%" ></div>
+</a>
+</div>
+
+<script>
+mapboxgl.accessToken = '{{ mapbox_access_token }}';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v9',
+    // causes pan & zoom handlers not to be applied, similar to
+    // .dragging.disable() and other handler .disable() funtions in Leaflet.
+    interactive: false
+});
+var sw = new mapboxgl.LngLat(-179, -80);
+var ne = new mapboxgl.LngLat(179, 89);
+var bounds = new mapboxgl.LngLatBounds(sw, ne);
+var camera = map.cameraForBounds(bounds, {padding: 5});
+// Mapbox can't display entire world in a small map. See
+// https://github.com/mapbox/mapbox-gl-js/issues/3055
+map.jumpTo(camera);
+map.on('load', function() {
+  map.loadImage('/static/crosssticks60.png', function(error, image) {
+    if (error) throw error;
+    map.addImage('crosssticks', image);
+    map.addLayer({
+      'id': 'children_geojson',
+      'source': {
+        'type': 'geojson',
+        'data': {{world.geojson_children_collection|tojson}}
+        },
+      'type': 'symbol',
+      'layout': {
+        'icon-image': 'crosssticks',
+        'icon-padding': 0,
+        'icon-size': 0.5,
+        'icon-allow-overlap':true,
+        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+        'text-field': '{title}',
+        'text-optional': true,
+        'text-allow-overlap': false,
+        'text-offset': [0, 0.6],
+        'text-anchor': 'top'
+      }
+    });
+    map.on('click', 'children_geojson', function (e) {
+        window.location = e.features[0].properties.path;
+    });
+    map.on('mouseenter', 'children_geojson', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'children_geojson', function () {
+        map.getCanvas().style.cursor = '';
+    });
+  });
+});
+</script>
+</div>
+
+
+{% endblock %}
+
