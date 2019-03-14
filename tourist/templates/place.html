@@ -122,5 +122,8 @@ Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point
     <a class="mui-btn" href="{{ url_for('place.create_view', parent=place.short_name) }}">place <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('club.create_view', parent=place.short_name) }}">club <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('pool.create_view', parent=place.short_name) }}">pool <i class="material-icons">add</i></a>
+{% else %}
+    <hr>
+    See the <a href="/tourist/about">about</a> page to update this page.
 {% endif %}
 {% endblock %}
