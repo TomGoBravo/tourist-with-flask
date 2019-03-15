@@ -1,11 +1,15 @@
 ---
 name: Field report issue template
 about: Information from the field to be posted at pucku.org
-title: ''
+title: "[Add short description such as name of place to update]"
 labels: field report
 assignees: ''
 
 ---
+
+> Thank you for contributing new information to the Underwater Hockey Tourist
+> Please replace the items in [....] with the requested information, delete this text and click `Submit new issue`.
+> An editor will add your update to the site soon. To learn about editing please see https://github.com/TomGoBravo/tourist-with-flask/wiki/Editor-guide.
 
 ## Place
 
