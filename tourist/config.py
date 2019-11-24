@@ -9,7 +9,7 @@ class EnvironmentConfig:
     LOG_DIR = 'logs'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = '87294798798799'  # Flask-Admin uses flash messages, which need a session
-    MAPBOX_MAP_ID = "mapbox.streets"
+    MAPBOX_MAP_ID = "streets-v11"
     MAPBOX_ACCESS_TOKEN = mapbox_access_token
     MAPBOX_SEARCH = True
     DEFAULT_CENTER_LAT = 1  # Must be non-zero to get included
