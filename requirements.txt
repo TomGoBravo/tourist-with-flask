@@ -1,9 +1,8 @@
 attrs
-git+https://github.com/TomGoBravo/flask-admin@leaflet-nom-search
+git+https://github.com/TomGoBravo/flask-admin@leaflet-nom-search#egg=Flask-Admin
 geojson>=2.4.1
 SQLAlchemy-Continuum
 Flask
-Flask-Admin
 Flask-SQLAlchemy
 Flask-Markdown
 Flask-Migrate
