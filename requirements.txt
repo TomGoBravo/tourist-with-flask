@@ -1,5 +1,5 @@
 attrs
-git+https://github.com/TomGoBravo/flask-admin@leaflet-nom-search#egg=Flask-Admin
+git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder#egg=Flask-Admin
 geojson>=2.4.1
 SQLAlchemy-Continuum
 Flask
