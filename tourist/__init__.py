@@ -30,6 +30,7 @@ def create_app(default_config_object=config['dev']):
 
     initialise_logger(app)
     app.logger.info(f'{__name__} starting up :)')
+    app.logger.info(f'DB: {app.config["SQLALCHEMY_DATABASE_URI"]}')
 
     Markdown(app)
     from .models.sqlalchemy import db
