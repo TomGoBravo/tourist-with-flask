@@ -55,13 +55,9 @@ greenlet==1.1.2
     # via sqlalchemy
 idna==2.8
     # via requests
-importlib-metadata==4.10.0
-    # via
-    #   pep517
-    #   sqlalchemy
 itsdangerous==1.1.0
     # via flask
-jinja2==2.10.3
+jinja2==2.11.3
     # via flask
 lazy==1.4
     # via flask-dance
@@ -131,8 +127,6 @@ sqlalchemy-utils==0.38.2
     # via sqlalchemy-continuum
 tomli==2.0.0
     # via pep517
-typing-extensions==4.0.1
-    # via importlib-metadata
 uritemplate==3.0.0
     # via -r requirements.in
 urllib3==1.26.7
@@ -147,10 +141,6 @@ wtforms==2.3.3
     # via
     #   flask-admin
     #   flask-pagedown
-zipp==3.7.0
-    # via
-    #   importlib-metadata
-    #   pep517
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
