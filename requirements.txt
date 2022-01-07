@@ -61,7 +61,7 @@ importlib-metadata==4.10.0
     #   sqlalchemy
 itsdangerous==1.1.0
     # via flask
-jinja2==2.10.3
+jinja2==3.0.3
     # via flask
 lazy==1.4
     # via flask-dance
@@ -69,7 +69,7 @@ mako==1.0.7
     # via alembic
 markdown==3.0.1
     # via flask-markdown
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   jinja2
     #   mako
