@@ -32,7 +32,9 @@ class TouristAdminBaseModelView(geoa.ModelView):
 
     def inaccessible_callback(self, name, **kwargs):
         # redirect to login page if not logged in
-        print (f'inaccessible_callback {current_user}, anon={current_user.is_anonymous} authn={current_user.is_authenticated}')
+        current_app.logger.info(f'inaccessible_callback user={current_user} '
+                           f'anon={current_user.is_anonymous} '
+                      f'authn={current_user.is_authenticated}')
         if current_user.is_anonymous:
             return redirect(url_for('github.login', next=request.url))
         else:

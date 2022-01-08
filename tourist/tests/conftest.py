@@ -1,9 +1,23 @@
 import pytest
+from flask_login import FlaskLoginClient
 from tourist import create_app
 import shutil
 import os.path
 from tourist.config import config
-from tourist.models import sqlalchemy
+import tourist.models.sqlalchemy
+
+from contextlib import contextmanager
+
+
+# From https://stackoverflow.com/a/51452451/341400
+@contextmanager
+def no_expire_on_commit():
+    s = tourist.models.sqlalchemy.db.session()
+    s.expire_on_commit = False
+    try:
+        yield
+    finally:
+        s.expire_on_commit = True
 
 
 def path_relative(rel: str) -> str:
@@ -22,4 +36,6 @@ def test_app():
 
     shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=TestConfig.SQLITE_DATABASE_PATH)
     app = create_app(TestConfig)
+    # FlaskLoginClient adds support for test_client(user=user)
+    app.test_client_class = FlaskLoginClient
     yield app

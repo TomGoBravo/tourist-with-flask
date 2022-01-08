@@ -1,7 +1,8 @@
 from geoalchemy2 import WKTElement
 from pytest import approx
 from tourist.scripts.sync import StaticSyncer
-from tourist.tests.conftest import test_app, path_relative
+from tourist.tests.conftest import no_expire_on_commit
+from tourist.tests.conftest import path_relative
 from tourist.models import sqlalchemy, attrib
 from tourist.scripts import sync
 from shapely.geometry.geo import mapping
@@ -64,8 +65,10 @@ def test_heavy(test_app):
     # Add a user
     with test_app.app_context():
         user = sqlalchemy.User(id=1, username='usernamefoo', email='testuser@domain.com', edit_granted=True)
-        sqlalchemy.db.session.add(user)
-        sqlalchemy.db.session.commit()
+
+        with no_expire_on_commit():
+            sqlalchemy.db.session.add(user)
+            sqlalchemy.db.session.commit()
 
         newsouthwales = sqlalchemy.Place.query.filter_by(short_name='newsouthwales').first()
 
@@ -88,10 +91,7 @@ def test_heavy(test_app):
         response = c.get('/admin/place/edit/?id=3')
         assert response.status_code == 302  # Without login
 
-        # Login, from https://stackoverflow.com/a/16238537/341400
-        with c.session_transaction() as sess:
-            sess['user_id'] = 1
-            sess['_fresh'] = True # https://flask-login.readthedocs.org/en/latest/#fresh-logins
+    with test_app.test_client(user=user) as c:
         response = c.get('/admin/place/edit/?id=3')
         assert response.status_code == 200
 

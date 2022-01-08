@@ -4,7 +4,7 @@ from typing import Dict, Union, Optional
 
 import geojson
 import attr
-from flask_dance.consumer.backend.sqla import OAuthConsumerMixin
+from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
 from flask_login import UserMixin
 from geoalchemy2 import Geometry, WKTElement, WKBElement
 from shapely.geometry.base import BaseGeometry
