@@ -24,7 +24,7 @@ class TouristAdminBaseModelView(geoa.ModelView):
     # From https://docs.mapbox.com/help/troubleshooting/migrate-legacy-static-tiles-api/
     # Used in flask-admin/flask_admin/contrib/geoa and flask_admin/static/admin/js/form.js
     # form.js pre-pends '//' so start the URL with the hostname.
-    tile_layer_url = 'api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}'
+    tile_layer_url = 'api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
     tile_layer_attribution = '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
 
     def is_accessible(self):
