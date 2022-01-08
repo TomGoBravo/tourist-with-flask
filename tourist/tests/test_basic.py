@@ -157,6 +157,12 @@ def test_static_sync_no_override():
     assert syncer.to_add == []
 
 
+def test_page_not_found(test_app):
+    with test_app.test_client() as c:
+        response = c.get('/tourist/page/notfound')
+        assert response.status_code == 404
+
+
 def test_import_export(test_app):
     with test_app.app_context():
         importer = sync.Importer()

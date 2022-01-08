@@ -35,14 +35,16 @@ def place_short_name(short_name):
 
 @tourist_bp.route("/page/<string:short_name>")
 def page_short_name(short_name):
-    pool = sqlalchemy.Pool.query.filter_by(short_name=short_name).first()
+    pool = sqlalchemy.Pool.query.filter_by(short_name=short_name).one_or_none()
     if pool:
         return redirect(pool.path)
-    club = sqlalchemy.Club.query.filter_by(short_name=short_name).first()
+    club = sqlalchemy.Club.query.filter_by(short_name=short_name).one_or_none()
     if club:
         return redirect(club.path)
-    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one()
-    return redirect(place.path)
+    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
+    if place:
+        return redirect(place.path)
+    return flask.render_template('404.html'), 404
 
 
 @tourist_bp.route("/<string:short_name>.html")
