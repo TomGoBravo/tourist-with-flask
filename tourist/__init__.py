@@ -3,10 +3,15 @@ from logging.handlers import RotatingFileHandler
 import logging
 import os.path
 import flask
+import markdown
+import markdown.extensions.wikilinks
+from tourist.models import sqlalchemy
 from sqlalchemy import event
 from tourist.config import config
 from flaskext.markdown import Markdown
 from flask_login import current_user
+
+from tourist.wikilinks import WikiLinkExtension
 
 
 def page_not_found(e):
@@ -32,7 +37,9 @@ def create_app(default_config_object=config['dev']):
     app.logger.info(f'{__name__} starting up :)')
     app.logger.info(f'DB: {app.config["SQLALCHEMY_DATABASE_URI"]}')
 
-    Markdown(app)
+    flask_md = Markdown(app)
+    flask_md.register_extension(WikiLinkExtension, {})
+
     from .models.sqlalchemy import db
     db.init_app(app)
 
@@ -80,6 +87,8 @@ def create_app(default_config_object=config['dev']):
     app.cli.add_command(sync_cli)
     from .scripts.usertool import usertool_cli
     app.cli.add_command(usertool_cli)
+    from .scripts.batchtool import batchtool_cli
+    app.cli.add_command(batchtool_cli)
 
     @event.listens_for(db.session, "before_flush")
     def before_flush(session, flush_context, instances):

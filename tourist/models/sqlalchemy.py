@@ -1,6 +1,7 @@
 import math
 from itertools import chain
 from typing import Dict, Union, Optional
+from typing import List
 
 import geojson
 import attr
@@ -213,6 +214,15 @@ class Pool(db.Model):
     parent = db.relationship(Place, backref='child_pools')
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
+
+    @property
+    def club_back_links(self) -> List[Club]:
+        clubs = []
+        link_text = f'[[{self.short_name}]]'
+        for club in self.parent.child_clubs:
+            if link_text in club.markdown:
+                clubs.append(club)
+        return clubs
 
     def __str__(self):
         if self.parent:

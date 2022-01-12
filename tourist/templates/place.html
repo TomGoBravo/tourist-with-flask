@@ -48,6 +48,10 @@
     <a href="{{ url_for('pool.edit_view', id=pool.id) }}" title="Edit pool">✎</a>{% endif %}
 </h3>
 <p>{{ pool.markdown|markdown }}</p>
+<p>{% if pool.club_back_links -%}
+{% for club_at_pool in pool.club_back_links -%}
+    <a href="#{{ club_at_pool.short_name }}">{{ club_at_pool.name }}</a> practices here.
+{% endfor %} {% else %} No clubs list {{ pool.name }} as a location. {% endif -%}</p>
 {%  if pool.entrance is not none %}
 Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point_query }}" target="_blank">{{ pool.name }} in Google Maps
 {# img width doesn't look right. I'm guessing it has something to do with
