@@ -1,4 +1,6 @@
 from typing import Dict, Iterable, List, Set
+
+from more_itertools import one
 from shapely.geometry import asShape
 from geoalchemy2.shape import from_shape, to_shape
 from flask.cli import AppGroup
@@ -232,16 +234,25 @@ def import_jsonl(input_path):
 
 
 def sort_entities(entities):
-    unique_short_names = set()
     children = defaultdict(list)
-    by_shortname = {}
+    shortname_list = defaultdict(list)
     for a in entities:
-        assert a.short_name not in unique_short_names
-        unique_short_names.add(a.short_name)
+        shortname_list[a.short_name].append(a)
         children[a.parent_short_name].append(a.short_name)
-        by_shortname[a.short_name] = a
+
+    by_shortname = {}
+    duplicates = {}
+    for short_name, short_name_entities in shortname_list.items():
+        if len(short_name_entities) == 1:
+            by_shortname[short_name] = short_name_entities[0]
+        else:
+            duplicates[short_name] = short_name_entities
+    if duplicates:
+        raise ValueError(f'Duplicates: {duplicates}')
+
     # Only 'world' has parent_id ''. Check that it is the only child of ''.
-    assert children[''] == ['world', ]
+    if children[''] != ['world', ]:
+        raise ValueError(f'Expected only child of "" is "world" but found {children[""]}')
 
     def parents_first(by_shortname, children, shortname=''):
         yield by_shortname[shortname]
@@ -249,8 +260,8 @@ def sort_entities(entities):
             for x in parents_first(by_shortname, children, child_name):
                 yield x
     sorted_entities = [e for e in parents_first(by_shortname, children, 'world')]
-    assert len(sorted_entities) == len(unique_short_names)  == len(entities)
-    assert {a.short_name for a in sorted_entities} == unique_short_names
+    assert len(sorted_entities) == len(by_shortname)  == len(entities)
+    assert {a.short_name for a in sorted_entities} == set(by_shortname.keys())
     return sorted_entities
 
 
