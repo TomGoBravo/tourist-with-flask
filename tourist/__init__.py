@@ -97,6 +97,7 @@ def create_app(default_config_object=config['dev']):
                 continue
             if not hasattr(instance, 'as_attrib_entity'):
                 continue
+            instance.validate()
             entity = instance.as_attrib_entity()
             app.logger.info(f'Change by {current_user}: {entity.dump_as_jsons()}')
 

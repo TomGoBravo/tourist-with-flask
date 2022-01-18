@@ -6,6 +6,7 @@ import click
 from flask.cli import AppGroup
 
 from tourist.models import sqlalchemy
+from tourist.models.sqlalchemy import PAGE_LINK_RE
 
 batchtool_cli = AppGroup('batchtool')
 
@@ -17,10 +18,7 @@ class ClubPoolLink:
     title: Optional[str]
 
     def __str__(self):
-        return f"Link in {self.club.short_name} to {self.target_short_name}"
-
-
-PAGE_LINK_RE = r'\[([^]]+)]\(/tourist/page/([^)]+)\)'
+        return f"Link on {self.club.path} to {self.target_short_name}"
 
 
 @batchtool_cli.command('club-pool-links')
@@ -84,3 +82,14 @@ def replace_club_pool_links(write):
     else:
         click.echo('Run with --write to commit changes')
 
+
+@batchtool_cli.command('validate')
+def validate():
+    for place in sqlalchemy.Place.query.all():
+        place.validate()
+
+    for club in sqlalchemy.Club.query.all():
+        club.validate()
+
+    for pool in sqlalchemy.Pool.query.all():
+        pool.validate()

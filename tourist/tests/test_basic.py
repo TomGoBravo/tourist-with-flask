@@ -1,3 +1,4 @@
+import pytest
 from geoalchemy2 import WKTElement
 from pytest import approx
 from tourist.scripts.sync import StaticSyncer
@@ -124,6 +125,30 @@ def test_place_properties():
     )
     assert place.area == 0
     assert place.area_text_scale == '\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb'
+
+
+def test_validate_place():
+    with pytest.raises(ValueError, match='short_name'):
+        sqlalchemy.Place(name='Foo', short_name=' bad_name').validate()
+
+    with pytest.raises(ValueError, match='parent'):
+        sqlalchemy.Place(name='Foo', short_name='shortie').validate()
+
+    with pytest.raises(ValueError, match='Wiki'):
+        sqlalchemy.Place(name='Foo', short_name='shortie', parent_id=2,
+                         markdown='[[link]]').validate()
+
+    sqlalchemy.Place(name='Foo', short_name='shortie', parent_id=2).validate()
+
+
+def test_validate_club():
+    with pytest.raises(ValueError, match='short_name'):
+        sqlalchemy.Club(name='Foo', short_name=' bad_name').validate()
+
+    with pytest.raises(ValueError, match='parent'):
+        sqlalchemy.Club(name='Foo', short_name='shortie').validate()
+
+    sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]').validate()
 
 
 def test_static_sync_no_override():

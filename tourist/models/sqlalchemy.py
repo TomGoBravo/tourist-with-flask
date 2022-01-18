@@ -1,4 +1,5 @@
 import math
+import re
 from itertools import chain
 from typing import Dict, Union, Optional
 from typing import List
@@ -51,6 +52,19 @@ def optional_geometry_to_shape(geom: Optional[Union[str, WKTElement, WKBElement]
         return to_shape(geom)
 
 
+SHORT_NAME_RE = r'[a-zA-Z][a-zA-Z0-9_-]+'
+
+PAGE_LINK_RE = r'\[([^]]+)]\((?:/tourist)?/page/([^)]+)\)'
+
+WIKI_LINK_RE = r'\[\[' + SHORT_NAME_RE + r'\]\]'
+
+def _validate_short_name(short_name):
+    if not re.fullmatch(SHORT_NAME_RE, short_name):
+        raise ValueError(
+            "short_name must start with a letter and be all letters (a-z), "
+            f"numbers (0-9), underscore (_) and dash (-). Found '{short_name}'")
+
+
 class Place(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -70,6 +84,13 @@ class Place(db.Model):
         else:
             parent_name = ''
         return f'{self.name}{parent_name}'
+
+    def validate(self):
+        _validate_short_name(self.short_name)
+        if self.parent_id is None and self.short_name != 'world':
+            raise ValueError("parent_id unset. Every place must have a parent.")
+        if self.markdown and re.search(WIKI_LINK_RE, self.markdown) is not None:
+            raise ValueError("Place markdown must not contain [[Wiki Links]]")
 
     @property
     def parents(self):
@@ -188,6 +209,11 @@ class Club(db.Model):
             parent_name = ''
         return f'{self.name}{parent_name}'
 
+    def validate(self):
+        _validate_short_name(self.short_name)
+        if self.parent_id is None:
+            raise ValueError("parent_id unset. Every Club must have a parent Place.")
+
     @property
     def path(self) -> str:
         return self.parent.path + '#' + self.short_name
@@ -215,8 +241,16 @@ class Pool(db.Model):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
 
+    def validate(self):
+        _validate_short_name(self.short_name)
+        if self.parent_id is None:
+            raise ValueError("parent_id unset. Every Pool must have a parent Place.")
+        if self.markdown and re.search(WIKI_LINK_RE, self.markdown) is not None:
+            raise ValueError("Pool markdown must not contain [[Wiki Links]]")
+
     @property
     def club_back_links(self) -> List[Club]:
+        """Returns clubs that have the same parent as and a [[wiki-link]] to, this pool."""
         clubs = []
         link_text = f'[[{self.short_name}]]'
         for club in self.parent.child_clubs:
