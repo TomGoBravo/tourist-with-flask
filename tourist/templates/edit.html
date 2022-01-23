@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: Edit {{club.name}}{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}Edit {{ club.name }}{% endblock %}
+
+{% block content %}
+
+<p>
+You are editing a club found in
+{% for p in club.parent.parents|reverse -%}
+<a href="{{ p.path }}">{{ p.name }}</a> &gt;
+{% endfor -%}
+<a href="{{ club.parent.path }}">{{ club.parent.name }}</a>
+</p>
+
+<p>You are looking at the simple edit form. There is a
+<a href="{{ url_for('club.edit_view', id=club.id) }}">complex admin edit interface</a>.</p>
+
+<form class="mui-form" method="POST" action="/tourist/edit/club/{{ club.id }}">
+    {{ form.hidden_tag() }}
+    <div class="mui-textfield">
+    <label>Club name</label>{{ form.name(size=20) }}
+    </div>
+    <div class="mui-textfield"><label>Description, contact information and more.</label>
+<button type="button" class="mui-btn mui-btn--raised" id="markdownhelpbtn"
+        onclick='toggleDisplayById("markdownhelp", "markdownhelpbtn")'>Show help</button>
+<div id="markdownhelp" class="mui-panel" style="display: none">Provide at least some way for
+        people to contact
+    you and your club. You can also add practice location and times. Enter the information using
+<a href="https://daringfireball.net/projects/markdown/syntax">markdown syntax</a>. For example:<br>
+    <div style="background:#f0f0f0">
+    *  Facebook Group &lt;http://facebook.com/group/myhockeyclub&gt;<br>
+    *  For more information contact Jane Doe at janedoe@gmail.com<br>
+    *  We play on Wednesday evenings at [[citypoolsomeville]]<br></div>
+{% if club.parent.child_pools %}
+<table class="mui-table"><thead><tr><th>Pool name</th><th>Format for link</th></tr></thead>
+    <tbody>
+    {% for pool in club.parent.child_pools %}
+    <tr><td>{{ pool.name }}</td><td>[[{{pool.short_name}}]]</td></tr>
+    {% endfor %}</tbody></table>
+{% else %}
+There are no pools in {{ club.parent.name }}.
+{% endif %}
+</div>
+    {{ form.markdown(rows=10) }}
+    </div>
+    <div class="mui-textfield">
+        <label>Status as of (date as yyyy-mm-dd)</label>{{ form.status_date(size=20) }}
+    </div>
+    <div class="mui-textfield">
+        <label>is (text comment starting with Nascent/Active/Dormant/Unknown)</label>{{
+        form.status_comment(size=20) }}
+    </div>
+    <input type="submit" value="Save" class="mui-btn mui-btn--raised mui-btn--primary">
+</form>
+
+{% endblock %}

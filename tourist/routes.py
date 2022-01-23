@@ -1,6 +1,10 @@
 import flask
+import flask_login
 import geojson
 from flask import render_template, Blueprint, redirect, url_for
+from wtforms.validators import DataRequired
+
+import tourist
 from .models import sqlalchemy
 
 tourist_bp = Blueprint('tourist_bp', __name__)
@@ -31,6 +35,31 @@ def place_short_name(short_name):
         return redirect(url_for('.home'))
     place = sqlalchemy.Place.query.filter_by(short_name=short_name).one()
     return render_template("place.html", place=place, mapbox_access_token=mapbox_access_token())
+
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, DateField
+
+class ClubForm(FlaskForm):
+    name = StringField('name', validators=[DataRequired()])
+    markdown = TextAreaField('markdown')
+    status_date = StringField('status_date')
+    status_comment = StringField('status_comment')
+
+
+@tourist_bp.route("/edit/club/<int:club_id>", methods=['GET', 'POST'])
+def edit_club(club_id):
+    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+        return tourist.inaccessible_response()
+
+    club = sqlalchemy.Club.query.get_or_404(club_id)
+    form = ClubForm(obj=club)
+    if form.validate_on_submit():
+        form.populate_obj(club)
+        flask.flash(f"Updated {club.name}")
+        sqlalchemy.db.session.commit()
+        return redirect(club.path)
+    return render_template("edit.html", form=form, club=club)
 
 
 @tourist_bp.route("/page/<string:short_name>")

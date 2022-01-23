@@ -5,6 +5,8 @@ import os.path
 import flask
 import markdown
 import markdown.extensions.wikilinks
+from flask import current_app
+
 from tourist.models import sqlalchemy
 from sqlalchemy import event
 from tourist.config import config
@@ -16,6 +18,17 @@ from tourist.wikilinks import WikiLinkExtension
 
 def page_not_found(e):
     return flask.render_template('404.html'), 404
+
+
+def inaccessible_response():
+    # redirect to login page if not logged in
+    current_app.logger.info(f'inaccessible_callback user={current_user} '
+                            f'anon={current_user.is_anonymous} '
+                            f'authn={current_user.is_authenticated}')
+    if current_user.is_anonymous:
+        return flask.redirect(flask.url_for('github.login', next=flask.request.url))
+    else:
+        flask.abort(403)
 
 
 def create_app(default_config_object=config['dev']):

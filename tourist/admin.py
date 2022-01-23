@@ -4,6 +4,8 @@ from flask import url_for, redirect, request, current_app
 from flask_admin.contrib import geoa
 from flask_login import current_user
 from wtforms import fields, widgets
+
+import tourist
 from tourist.models import sqlalchemy
 import flask_pagedown.widgets
 import flask_pagedown.fields
@@ -31,14 +33,7 @@ class TouristAdminBaseModelView(geoa.ModelView):
         return current_user.is_authenticated and current_user.edit_granted
 
     def inaccessible_callback(self, name, **kwargs):
-        # redirect to login page if not logged in
-        current_app.logger.info(f'inaccessible_callback user={current_user} '
-                           f'anon={current_user.is_anonymous} '
-                      f'authn={current_user.is_authenticated}')
-        if current_user.is_anonymous:
-            return redirect(url_for('github.login', next=request.url))
-        else:
-            flask.abort(403)
+        return tourist.inaccessible_response()
 
     def create_form(self):
         form = super(TouristAdminBaseModelView, self).create_form()

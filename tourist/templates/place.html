@@ -37,7 +37,7 @@
 {% for club in place.child_clubs %}
 <h3 id='{{ club.short_name }}'>{{ club.name }}
     {% if current_user.edit_granted -%}
-    <a href="{{ url_for('club.edit_view', id=club.id) }}" title="Edit club">✎</a>{% endif %}
+    <a href="{{ url_for('.edit_club', club_id=club.id) }}" title="Edit club">✎</a>{% endif %}
 </h3>
     <p>{{ club.markdown|markdown }}</p>
 {% endfor %}

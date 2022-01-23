@@ -31,6 +31,7 @@ flask==2.0.2
     #   flask-migrate
     #   flask-pagedown
     #   flask-sqlalchemy
+    #   flask-wtf
 flask-admin @ git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-nocustomtiles
     # via -r requirements.in
 flask-dance==5.1.0
@@ -47,6 +48,8 @@ flask-sqlalchemy==2.5.1
     # via
     #   -r requirements.in
     #   flask-migrate
+flask-wtf==1.0.0
+    # via -r requirements.in
 geoalchemy2==0.10.1
     # via -r requirements.in
 geojson==2.4.1
@@ -61,7 +64,9 @@ importlib-metadata==4.10.0
     #   pep517
     #   sqlalchemy
 itsdangerous==2.0.1
-    # via flask
+    # via
+    #   flask
+    #   flask-wtf
 jinja2==3.0.3
     # via flask
 mako==1.0.7
@@ -147,6 +152,7 @@ wtforms==2.3.3
     # via
     #   flask-admin
     #   flask-pagedown
+    #   flask-wtf
 zipp==3.7.0
     # via
     #   importlib-metadata

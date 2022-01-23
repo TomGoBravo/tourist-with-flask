@@ -225,6 +225,20 @@ jQuery(function($) {
     $(this).next().slideToggle(200);
   });
 });
+
+function toggleDisplayById(e_id, btn_id) {
+  var e = document.getElementById(e_id);
+  var btn = document.getElementById(btn_id);
+  if (e.style.display === "none") {
+    e.style.display = "block";
+    btn.classList.remove("mui-btn--raised");
+    btn.classList.add("mui-btn--flat");
+  } else {
+    e.style.display = "none";
+    btn.classList.remove("mui-btn--flat");
+    btn.classList.add("mui-btn--raised");
+  }
+}
     </script>
     <title>{% block htmltitle %}{% endblock %}</title>
   </head>

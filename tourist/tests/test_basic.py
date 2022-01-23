@@ -72,6 +72,7 @@ def test_heavy(test_app):
             sqlalchemy.db.session.commit()
 
         newsouthwales = sqlalchemy.Place.query.filter_by(short_name='newsouthwales').first()
+        starfish = sqlalchemy.Club.query.filter_by(short_name='sydneystarfish').first()
 
     with test_app.test_client() as c:
         response = c.get('/tourist/')
@@ -92,6 +93,9 @@ def test_heavy(test_app):
         response = c.get('/admin/place/edit/?id=3')
         assert response.status_code == 302  # Without login
 
+        response = c.get(f'/tourist/edit/club/{starfish.id}')
+        assert response.status_code == 302  # Without login
+
     with test_app.test_client(user=user) as c:
         response = c.get('/admin/place/edit/?id=3')
         assert response.status_code == 200
@@ -103,6 +107,10 @@ def test_heavy(test_app):
             region=json.dumps(mapping(to_shape(newsouthwales.region))),
         ))
         assert response.status_code == 302
+
+        response = c.get(f'/tourist/edit/club/{starfish.id}')
+        assert response.status_code == 200
+        assert 'Provide at least ' in response.get_data(as_text=True)
 
     with test_app.app_context():
         newnewsouthwales = sqlalchemy.Place.query.filter_by(short_name='newsouthwales').first()

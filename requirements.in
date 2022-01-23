@@ -6,6 +6,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Markdown
 Flask-Migrate
+Flask-WTF
 shapely
 flask-pagedown
 GeoAlchemy2
