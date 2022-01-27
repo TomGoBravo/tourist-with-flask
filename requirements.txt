@@ -50,17 +50,22 @@ flask-sqlalchemy==2.5.1
     #   flask-migrate
 flask-wtf==1.0.0
     # via -r requirements.in
+freezegun==1.1.0
+    # via -r requirements.in
 geoalchemy2==0.10.1
     # via -r requirements.in
 geojson==2.4.1
     # via -r requirements.in
 greenlet==1.1.2
     # via sqlalchemy
+humanize==3.13.1
+    # via -r requirements.in
 idna==2.8
     # via requests
 importlib-metadata==4.10.0
     # via
     #   click
+    #   humanize
     #   pep517
     #   sqlalchemy
 itsdangerous==2.0.1
@@ -103,7 +108,9 @@ pyparsing==3.0.6
 pytest==4.3.0
     # via -r requirements.in
 python-dateutil==2.8.0
-    # via alembic
+    # via
+    #   alembic
+    #   freezegun
 python-editor==1.0.4
     # via alembic
 requests==2.27.1

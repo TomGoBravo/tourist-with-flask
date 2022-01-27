@@ -1,3 +1,4 @@
+import datetime
 import math
 import re
 from itertools import chain
@@ -190,6 +191,13 @@ club_pools = db.Table('club_pools',
 )
 
 
+from enum import Enum, unique
+@unique
+class ClubState(Enum):
+    CURRENT = '\N{HEAVY CHECK MARK}'
+    STALE = '?'
+
+
 class Club(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -202,6 +210,17 @@ class Club(db.Model):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
 
+    @property
+    def club_state(self) -> ClubState:
+        if not self.status_date:
+            return ClubState.STALE
+
+        d = datetime.datetime.fromisoformat(self.status_date)
+        if (datetime.datetime.now() - d) > datetime.timedelta(days=365):
+            return ClubState.STALE
+        else:
+            return ClubState.CURRENT
+
     def __str__(self):
         if self.parent:
             parent_name = f' (in {self.parent.name})'
@@ -213,6 +232,13 @@ class Club(db.Model):
         _validate_short_name(self.short_name)
         if self.parent_id is None:
             raise ValueError("parent_id unset. Every Club must have a parent Place.")
+        # TODO(TomGoBravo): Require status_date be always set
+        if self.status_date:
+            try:
+                d = datetime.datetime.fromisoformat(self.status_date)
+            except ValueError:
+                raise ValueError("status_date must be a date in ISO YYYY-MM-DD format")
+
 
     @property
     def path(self) -> str:

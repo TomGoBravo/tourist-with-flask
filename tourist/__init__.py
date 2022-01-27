@@ -1,8 +1,10 @@
+import datetime
 import os
 from logging.handlers import RotatingFileHandler
 import logging
 import os.path
 import flask
+import humanize
 import markdown
 import markdown.extensions.wikilinks
 from flask import current_app
@@ -31,6 +33,11 @@ def inaccessible_response():
         flask.abort(403)
 
 
+def humanize_date_str(date_str) -> str:
+    d = datetime.datetime.fromisoformat(date_str)
+    return humanize.naturaltime(d)
+
+
 def create_app(default_config_object=config['dev']):
     """ Bootstrap function to initialise the Flask app and config """
     app = flask.Flask(__name__)
@@ -45,6 +52,7 @@ def create_app(default_config_object=config['dev']):
         print('Loading secrets.cfg')
         app.config.from_pyfile('secrets.cfg')
     app.config.from_envvar('TOURIST_CONFIG_FILE', silent=True)
+    app.jinja_env.filters['humanize_date_str'] = humanize_date_str
 
     initialise_logger(app)
     app.logger.info(f'{__name__} starting up :)')

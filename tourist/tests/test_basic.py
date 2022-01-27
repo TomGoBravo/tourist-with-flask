@@ -9,6 +9,8 @@ from tourist.scripts import sync
 from shapely.geometry.geo import mapping
 import json
 from geoalchemy2.shape import to_shape
+from freezegun import freeze_time
+
 
 #import logging
 #logging.basicConfig()
@@ -157,6 +159,20 @@ def test_validate_club():
         sqlalchemy.Club(name='Foo', short_name='shortie').validate()
 
     sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]').validate()
+
+
+def test_club_status_state():
+    c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
+                        status_date='2021-01-15')
+    with freeze_time("2022-01-15"):
+        assert c.club_state == sqlalchemy.ClubState.CURRENT
+    with freeze_time("2022-01-16"):
+        assert c.club_state == sqlalchemy.ClubState.STALE
+
+    c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
+                        status_date='')
+    assert c.club_state == sqlalchemy.ClubState.STALE
+    c.validate()
 
 
 def test_static_sync_no_override():

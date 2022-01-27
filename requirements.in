@@ -19,3 +19,7 @@ flask_dance
 sqlalchemy
 pytest
 pip-tools
+humanize  # To format times
+
+# For testing:
+freezegun
