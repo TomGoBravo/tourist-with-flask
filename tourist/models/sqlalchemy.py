@@ -20,6 +20,9 @@ from geoalchemy2.shape import from_shape, to_shape
 
 
 # Copying https://stackoverflow.com/q/51065521/341400
+from sqlalchemy_continuum import make_versioned
+from sqlalchemy_continuum.plugins import FlaskPlugin
+
 from tourist.models import attrib
 
 db = SQLAlchemy()
@@ -30,7 +33,7 @@ db = SQLAlchemy()
 
 # make_versioned kills sync performance, from 2 seconds to 51 seconds for 900 items.
 # I'll make do without online versions and depend on the Entity dump for a backup.
-#make_versioned(plugins=[FlaskPlugin()])
+make_versioned(plugins=[FlaskPlugin()])
 
 
 @attr.s(auto_attribs=True)
@@ -78,6 +81,8 @@ class Place(db.Model):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
     geonames_id = db.Column(db.Integer, nullable=True)
+
+    __versioned__ = {}
 
     def __str__(self):
         if self.parent:
@@ -210,6 +215,8 @@ class Club(db.Model):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
 
+    __versioned__ = {}
+
     @property
     def club_state(self) -> ClubState:
         if not self.status_date:
@@ -266,6 +273,8 @@ class Pool(db.Model):
     parent = db.relationship(Place, backref='child_pools')
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
+
+    __versioned__ = {}
 
     def validate(self):
         _validate_short_name(self.short_name)

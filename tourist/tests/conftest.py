@@ -26,10 +26,10 @@ def path_relative(rel: str) -> str:
     return os.path.join(this_dir, rel)
 
 
-@pytest.yield_fixture(scope='module')
-def test_app():
+@pytest.fixture
+def test_app(tmp_path):
     class TestConfig(config['dev']):
-        SQLITE_DATABASE_PATH = '/tmp/touristtest.db'
+        SQLITE_DATABASE_PATH = str(tmp_path / 'touristtest.db')
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + SQLITE_DATABASE_PATH
         TESTING = True
         ALLOW_UNAUTHENTICATED_ADMIN = False
