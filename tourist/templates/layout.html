@@ -117,6 +117,24 @@ button {
   transform: translate(200px);
 }
 
+/**
+ * Flash CSS
+ * Copied from https://github.com/muicss/flaskapp/blob/ff688a8f693c873bd8f46151b04fddbdd4d7d2b1/flaskapp/static/style.css
+ * This displays messages in a really ugly sharp red box.
+ */
+#flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 5;
+}
+#flash li {
+  font-size: 12px;
+  color: #fff;
+  background-color: red;
+  padding: 1px 5px;
+  margin: 2px;
+}
 
 /**
  * Header CSS
@@ -240,6 +258,35 @@ function toggleDisplayById(e_id, btn_id) {
   }
 }
     </script>
+
+{# Copied from https://github.com/muicss/flaskapp/blob/f1e1fd5761ce7e5717b031e007be5efc37714039/flaskapp/templates/shared/base-layout.html #}
+{% with messages = get_flashed_messages() -%}
+{% if messages -%}
+<script>
+  window.addEventListener('load', function() {
+    var ul = document.createElement('ul'),
+        li;
+
+    ul.id = 'flash';
+    ul.className = 'mui-list--unstyled';
+
+    {% for message in messages: %}
+    li = document.createElement('li');
+    li.textContent = "{{ message }}";
+    ul.appendChild(li);
+    {% endfor %}
+
+    document.body.appendChild(ul);
+
+    // Hides message after 6.5 seconds. It'd be much nicer to display until the user clicks away.
+    setTimeout(function(){
+      ul.parentNode.removeChild(ul);
+    }, 6500);
+  });
+</script>
+{%- endif %}
+{%- endwith %}
+
     <title>{% block htmltitle %}{% endblock %}</title>
   </head>
   <body>
