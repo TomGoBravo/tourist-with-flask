@@ -175,6 +175,36 @@ def test_club_status_state():
     c.validate()
 
 
+def test_club_without_status_date(test_app):
+    with test_app.app_context():
+        world = sqlalchemy.Place(
+            name='World',
+            short_name='world',
+            region=WKTElement('POLYGON(EMPTY)', srid=4326),
+            id=1,
+            markdown='',
+        )
+        place = sqlalchemy.Place(
+            name='Test Name',
+            short_name='somewhere',
+            parent_id=1,
+            region=WKTElement(
+                'POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
+                '150.90 -34.42))', srid=4326),
+            id=2,
+            markdown='',
+        )
+        club = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='Club Info',
+                            status_date='')
+        sqlalchemy.db.session.add_all([world, place, club])
+        sqlalchemy.db.session.commit()
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/place/somewhere')
+        assert response.status_code == 200
+        assert 'Club Info' in response.get_data(as_text=True)
+
+
 def test_static_sync_no_override():
     world = sqlalchemy.Place(
         name='World',
