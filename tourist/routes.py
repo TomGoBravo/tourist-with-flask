@@ -2,6 +2,7 @@ import flask
 import flask_login
 import geojson
 from flask import render_template, Blueprint, redirect, url_for
+from wtforms import FormField
 from wtforms.validators import DataRequired
 
 import tourist
@@ -38,7 +39,7 @@ def place_short_name(short_name):
 
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, DateField
+from wtforms import StringField, TextAreaField, DateField, BooleanField, FieldList
 
 class ClubForm(FlaskForm):
     name = StringField('name', validators=[DataRequired()])
@@ -60,6 +61,34 @@ def edit_club(club_id):
         sqlalchemy.db.session.commit()
         return redirect(club.path)
     return render_template("edit.html", form=form, club=club)
+
+
+class DeleteItemForm(FlaskForm):
+    confirm = BooleanField('confirm')
+
+
+class DeleteItemsForm(FlaskForm):
+    clubs_to_delete = FieldList(FormField(DeleteItemForm))
+    pools_to_delete = FieldList(FormField(DeleteItemForm))
+    places_to_delete = FieldList(FormField(DeleteItemForm))
+
+
+@tourist_bp.route("/delete/place/<int:place_id>", methods=['GET', 'POST'])
+def delete_place(place_id):
+    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+        return tourist.inaccessible_response()
+
+    place = sqlalchemy.Place.query.get_or_404(place_id)
+    form = DeleteItemsForm(data={
+        'clubs_to_delete': [{'name': c.name, 'confirm': False} for c in place.child_clubs],
+        'pools_to_delete': [{'name': p.name, 'confirm': False} for p in place.child_pools],
+        'places_to_delete': [{'name': p.name, 'confirm': False} for p in place.child_places]
+    })
+    return render_template('delete.html', form=form, place=place)
+
+
+
+
 
 
 @tourist_bp.route("/page/<string:short_name>")

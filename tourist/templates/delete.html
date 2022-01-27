@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: Delete {{place.name}}{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}Delete {{ place.name }}{% endblock %}
+
+{% block content %}
+
+<p>
+You are deleting items in
+{% for p in place.parents|reverse -%}
+<a href="{{ p.path }}">{{ p.name }}</a> &gt;
+{% endfor -%}
+    {{ place.name }}
+</p>
+
+<form class="mui-form" method="POST" action="/tourist/delete/place/{{ place.id }}">
+    {{ form.hidden_tag() }}
+    Clubs:<br>
+   {% for nested in form.clubs_to_delete %}
+        {{ nested.object_data.name }} {{ nested.confirm }}<br>
+    {% endfor %}
+    Pools:<br>
+    {% for nested in form.pools_to_delete %}
+    {{ nested.object_data.name }} {{ nested.confirm }}<br>
+    {% endfor %}
+    Places:<br>
+    {% for nested in form.places_to_delete %}
+    {{ nested.object_data.name }} {{ nested.confirm }}<br>
+    {% endfor %}
+
+    You can click but this doesn't work yet...
+    <input type="submit" value="Delete" class="mui-btn mui-btn--raised mui-btn--primary">
+</form>
+
+{% endblock %}
