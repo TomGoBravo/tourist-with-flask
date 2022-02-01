@@ -61,7 +61,7 @@ def edit_club(club_id):
         flask.flash(f"Updated {club.name}")
         sqlalchemy.db.session.commit()
         return redirect(club.path)
-    return render_template("edit.html", form=form, club=club)
+    return render_template("edit_club.html", form=form, club=club)
 
 
 class DeleteItemForm(FlaskForm):
