@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: Delete {{pool.name}}{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}Delete {{ pool.name }}{% endblock %}
+
+{% block content %}
+
+{% if pool.club_back_links %}
+
+{{ pool.name }} can not be deleted while there are links to it from club(s)<ul>
+    {% for club_at_pool in pool.club_back_links -%}
+    <li>{{ club_at_pool.name }}</li>
+    {% endfor %}
+</ul>
+
+{% else %}
+<p>
+Confirm that you intend to delete
+{% for p in pool.parent.parents|reverse -%}
+<a href="{{ p.path }}">{{ p.name }}</a> &gt;
+{% endfor -%}
+    {{pool.parent.name}} &gt; {{ pool.name }}.
+</p>
+
+<form class="mui-form" method="POST" action="/tourist/delete/pool/{{ pool.id }}">
+    {{ form.hidden_tag() }}
+    Confirm delete: {{ form.confirm }}<br>
+    <input type="submit" value="Delete" class="mui-btn mui-btn--raised mui-btn--primary">
+</form>
+{% endif %}
+
+{% endblock %}

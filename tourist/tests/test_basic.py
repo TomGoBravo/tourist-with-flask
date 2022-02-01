@@ -175,7 +175,7 @@ def test_club_status_state():
     c.validate()
 
 
-def test_club_without_status_date(test_app):
+def add_some_entities(test_app):
     with test_app.app_context():
         world = sqlalchemy.Place(
             name='World',
@@ -184,9 +184,9 @@ def test_club_without_status_date(test_app):
             id=1,
             markdown='',
         )
-        place = sqlalchemy.Place(
-            name='Test Name',
-            short_name='somewhere',
+        country = sqlalchemy.Place(
+            name='Country Name',
+            short_name='country',
             parent_id=1,
             region=WKTElement(
                 'POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
@@ -194,15 +194,139 @@ def test_club_without_status_date(test_app):
             id=2,
             markdown='',
         )
-        club = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='Club Info',
-                            status_date='')
-        sqlalchemy.db.session.add_all([world, place, club])
+        metro = sqlalchemy.Place(
+            name='Metro Name',
+            short_name='metro',
+            parent_id=2,
+            region=WKTElement(
+                'POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
+                '150.90 -34.42))', srid=4326),
+            id=3,
+            markdown='',
+        )
+        club = sqlalchemy.Club(name='Foo Club', short_name='shortie', parent_id=3,
+                               markdown='Foo Club plays at [[poolish]].',
+                               id=1,
+                               status_date='')
+        pool = sqlalchemy.Pool(name='Metro Pool', short_name='poolish', parent_id=3,
+                               markdown='Some palace', id=1)
+        sqlalchemy.db.session.add_all([world, country, metro, club, pool])
         sqlalchemy.db.session.commit()
 
+
+def add_and_return_edit_granted_user(test_app):
+    with test_app.app_context():
+        user_edit_granted = sqlalchemy.User(id=1, username='blah', email='testuser2@domain.com',
+                                            edit_granted=True)
+        with no_expire_on_commit():
+            sqlalchemy.db.session.add_all([user_edit_granted])
+            sqlalchemy.db.session.commit()
+        return user_edit_granted
+
+
+def test_club_without_status_date(test_app):
+    add_some_entities(test_app)
+
     with test_app.test_client() as c:
-        response = c.get('/tourist/place/somewhere')
+        response = c.get('/tourist/place/metro')
         assert response.status_code == 200
-        assert 'Club Info' in response.get_data(as_text=True)
+        assert 'Foo Club plays' in response.get_data(as_text=True)
+
+
+def test_delete_club(test_app):
+    add_some_entities(test_app)
+    user = add_and_return_edit_granted_user(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/delete/club/1')
+        assert response.status_code == 302  # Without login
+
+    with test_app.test_client(user=user) as c:
+        response = c.get('/tourist/delete/club/1')
+        assert response.status_code == 200
+        assert 'Foo Club' in response.get_data(as_text=True)
+
+        # Post without the `confirm` checkbox set.
+        response = c.post(f'/tourist/delete/club/1', data=dict(csrf_token=c.csrf_token))
+        assert response.status_code == 200
+
+    # Check that delete didn't happen
+    with test_app.app_context():
+        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 1
+
+    with test_app.test_client(user=user) as c:
+        response = c.post(f'/tourist/delete/club/1', data=dict(confirm=True,
+                                                               csrf_token=c.csrf_token))
+        assert response.status_code == 302
+        assert response.location.endswith('/tourist/place/metro')
+
+    with test_app.app_context():
+        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
+
+
+def test_delete_place(test_app):
+    add_some_entities(test_app)
+    user = add_and_return_edit_granted_user(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/delete/place/2')
+        assert response.status_code == 302  # Without login
+
+    with test_app.test_client(user=user) as c:
+        response = c.get('/tourist/delete/place/2')
+        assert response.status_code == 200
+        assert 'can not be deleted' in response.get_data(as_text=True)
+
+        response = c.post(f'/tourist/delete/place/3', data=dict(csrf_token=c.csrf_token))
+        assert response.status_code == 200
+
+    # Check that delete didn't happen
+    with test_app.app_context():
+        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 1
+
+    with test_app.test_client(user=user) as c:
+        response = c.post(f'/tourist/delete/place/3', data=dict(confirm=True,
+                                                             csrf_token=c.csrf_token))
+        assert response.status_code == 302
+        assert response.location.endswith('/tourist/place/country')
+
+    with test_app.app_context():
+        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
+
+
+def test_delete_pool(test_app):
+    add_some_entities(test_app)
+    user = add_and_return_edit_granted_user(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/delete/pool/1')
+        assert response.status_code == 302  # Without login
+
+    with test_app.test_client(user=user) as c:
+        response = c.get('/tourist/delete/pool/1')
+        assert response.status_code == 200
+        assert 'can not be deleted' in response.get_data(as_text=True)
+
+        with pytest.raises(ValueError, match="club_back_links"):
+            c.post(f'/tourist/delete/pool/1', data=dict(confirm=True,
+                                                                    csrf_token=c.csrf_token))
+
+    # Check that delete didn't happen
+    with test_app.app_context():
+        assert sqlalchemy.Pool.query.filter_by(short_name='poolish').count() == 1
+        club = sqlalchemy.Club.query.get(1)
+        club.markdown = 'Club Foo has no pool'
+        sqlalchemy.db.session.add(club)
+        sqlalchemy.db.session.commit()
+
+    with test_app.test_client(user=user) as c:
+        response = c.post(f'/tourist/delete/pool/1', data=dict(confirm=True,
+                                                               csrf_token=c.csrf_token))
+        assert response.status_code == 302
+        assert response.location.endswith('/tourist/place/metro')
+
+    with test_app.app_context():
+        assert sqlalchemy.Pool.query.filter_by(short_name='poolish').count() == 0
 
 
 def test_static_sync_no_override():

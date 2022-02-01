@@ -20,31 +20,46 @@
 
 {% block content %}
 
+{% if place.child_places %}
 <p>
-You are deleting items in
+    {{ place.name }} can not be deleted while the following child places exist:
+    <ul>
+    {% for p in place.child_places %}<li><a href="{{p.path}}">{{ p.name }}</a></li>{% endfor %}
+    </ul>
+</p>
+{% else %}
+<p>
+Confirm that you intend to delete
 {% for p in place.parents|reverse -%}
 <a href="{{ p.path }}">{{ p.name }}</a> &gt;
 {% endfor -%}
-    {{ place.name }}
+    {{ place.name }}.
+</p>
+
+<p>
+    This will also delete:
+<ul>
+<li>Clubs:<ul>
+{% for club in place.child_clubs %}
+<li>{{ club.name }}</li>
+{% endfor %}
+</ul>
+</li>
+
+<li>Pools:<ul>
+    {% for pool in place.child_pools %}
+    <li>{{ pool.name }}</li>
+    {% endfor %}
+</ul>
+</li>
+</ul>
 </p>
 
 <form class="mui-form" method="POST" action="/tourist/delete/place/{{ place.id }}">
     {{ form.hidden_tag() }}
-    Clubs:<br>
-   {% for nested in form.clubs_to_delete %}
-        {{ nested.object_data.name }} {{ nested.confirm }}<br>
-    {% endfor %}
-    Pools:<br>
-    {% for nested in form.pools_to_delete %}
-    {{ nested.object_data.name }} {{ nested.confirm }}<br>
-    {% endfor %}
-    Places:<br>
-    {% for nested in form.places_to_delete %}
-    {{ nested.object_data.name }} {{ nested.confirm }}<br>
-    {% endfor %}
-
-    You can click but this doesn't work yet...
+    Confirm delete: {{ form.confirm }}<br>
     <input type="submit" value="Delete" class="mui-btn mui-btn--raised mui-btn--primary">
 </form>
+{% endif %}
 
 {% endblock %}

@@ -1,6 +1,7 @@
 import flask
 import flask_login
 import geojson
+import wtforms.validators
 from flask import render_template, Blueprint, redirect, url_for
 from wtforms import FormField
 from wtforms.validators import DataRequired
@@ -64,13 +65,29 @@ def edit_club(club_id):
 
 
 class DeleteItemForm(FlaskForm):
-    confirm = BooleanField('confirm')
+    confirm = BooleanField('confirm', default="false", validators=[
+        wtforms.validators.DataRequired()])
 
 
-class DeleteItemsForm(FlaskForm):
-    clubs_to_delete = FieldList(FormField(DeleteItemForm))
-    pools_to_delete = FieldList(FormField(DeleteItemForm))
-    places_to_delete = FieldList(FormField(DeleteItemForm))
+def delete_pool_and_flash(pool: sqlalchemy.Pool):
+    flask.flash(f"Deleting {pool.name}")
+    sqlalchemy.db.session.delete(pool)
+
+
+def delete_club_and_flash(club: sqlalchemy.Club):
+    flask.flash(f"Deleting {club.name}")
+    sqlalchemy.db.session.delete(club)
+
+
+def delete_place_children_and_flash(place: sqlalchemy.Place):
+    if place.child_places:
+        raise ValueError("Attempt to delete place with child_places")
+    for pool in place.child_pools:
+        delete_pool_and_flash(pool)
+    for club in place.child_clubs:
+        delete_club_and_flash(club)
+    flask.flash(f"Deleting {place.name}")
+    sqlalchemy.db.session.delete(place)
 
 
 @tourist_bp.route("/delete/place/<int:place_id>", methods=['GET', 'POST'])
@@ -79,17 +96,54 @@ def delete_place(place_id):
         return tourist.inaccessible_response()
 
     place = sqlalchemy.Place.query.get_or_404(place_id)
-    form = DeleteItemsForm(data={
-        'clubs_to_delete': [{'name': c.name, 'confirm': False} for c in place.child_clubs],
-        'pools_to_delete': [{'name': p.name, 'confirm': False} for p in place.child_pools],
-        'places_to_delete': [{'name': p.name, 'confirm': False} for p in place.child_places]
-    })
-    return render_template('delete.html', form=form, place=place)
+
+    form = DeleteItemForm(data={'confirm': False})
+
+    if form.validate_on_submit():
+        parent_path = place.parent.path
+        delete_place_children_and_flash(place)
+        sqlalchemy.db.session.commit()
+        return redirect(parent_path)
+
+    return render_template('delete_place.html', form=form, place=place)
 
 
+@tourist_bp.route("/delete/club/<int:club_id>", methods=['GET', 'POST'])
+def delete_club(club_id):
+    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+        return tourist.inaccessible_response()
+
+    club = sqlalchemy.Club.query.get_or_404(club_id)
+
+    form = DeleteItemForm(data={'confirm': False})
+
+    if form.validate_on_submit():
+        parent_path = club.parent.path
+        delete_club_and_flash(club)
+        sqlalchemy.db.session.commit()
+        return redirect(parent_path)
+
+    return render_template('delete_club.html', form=form, club=club)
 
 
+@tourist_bp.route("/delete/pool/<int:pool_id>", methods=['GET', 'POST'])
+def delete_pool(pool_id):
+    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+        return tourist.inaccessible_response()
 
+    pool = sqlalchemy.Pool.query.get_or_404(pool_id)
+
+    form = DeleteItemForm(data={'confirm': False})
+
+    if form.validate_on_submit():
+        if pool.club_back_links:
+            raise ValueError("Attempt to delete pool when it has club_back_links")
+        parent_path = pool.parent.path
+        delete_pool_and_flash(pool)
+        sqlalchemy.db.session.commit()
+        return redirect(parent_path)
+
+    return render_template('delete_pool.html', form=form, pool=pool)
 
 @tourist_bp.route("/page/<string:short_name>")
 def page_short_name(short_name):

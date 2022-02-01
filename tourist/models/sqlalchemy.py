@@ -166,7 +166,7 @@ class Place(db.Model):
             region=optional_geometry_to_shape(self.region),
             geonames_id=self.geonames_id,
             status_comment=self.status_comment,
-            status_date=self.status_date,
+            status_date=self.status_date or None,
         )
 
 
@@ -259,7 +259,7 @@ class Club(db.Model):
             markdown=self.markdown,
             parent_short_name=self.parent.short_name,
             status_comment=self.status_comment,
-            status_date=self.status_date,
+            status_date=self.status_date or None,
         )
 
 
@@ -334,7 +334,7 @@ class Pool(db.Model):
             parent_short_name=self.parent.short_name,
             point=optional_geometry_to_shape(self.entrance),
             status_comment=self.status_comment,
-            status_date=self.status_date,
+            status_date=self.status_date or None,
         )
 
 
