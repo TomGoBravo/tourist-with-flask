@@ -8,11 +8,6 @@
     <script src="//cdn.muicss.com/mui-0.9.41/js/mui.js"></script>
     <script src="//code.jquery.com/jquery-2.1.4.min.js"></script>
     <link href="//fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <script src='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
-    <link href='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
-
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
     <style>
 /**
  * Body CSS
@@ -288,6 +283,7 @@ function toggleDisplayById(e_id, btn_id) {
 {%- endwith %}
 
     <title>{% block htmltitle %}{% endblock %}</title>
+    {% block head_extras %}{% endblock %}
   </head>
   <body>
 {% block bodytop %}{% endblock %}

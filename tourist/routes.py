@@ -3,6 +3,7 @@ import flask_login
 import geojson
 import wtforms.validators
 from flask import render_template, Blueprint, redirect, url_for
+from flask_admin.contrib.geoa.fields import GeoJSONField
 from wtforms import FormField
 from wtforms.validators import DataRequired
 
@@ -62,6 +63,29 @@ def edit_club(club_id):
         sqlalchemy.db.session.commit()
         return redirect(club.path)
     return render_template("edit_club.html", form=form, club=club)
+
+
+class PlaceForm(FlaskForm):
+    name = StringField('name', validators=[DataRequired()])
+    markdown = TextAreaField('markdown')
+    region = GeoJSONField('region', srid=4326, session=sqlalchemy.db.session, geometry_type="POLYGON")
+    status_date = StringField('status_date')
+    status_comment = StringField('status_comment')
+
+
+@tourist_bp.route("/edit/place/<int:place_id>", methods=['GET', 'POST'])
+def edit_place(place_id):
+    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+        return tourist.inaccessible_response()
+
+    place = sqlalchemy.Place.query.get_or_404(place_id)
+    form = PlaceForm(obj=place)
+    if form.validate_on_submit():
+        form.populate_obj(place)
+        flask.flash(f"Updated {place.name}")
+        sqlalchemy.db.session.commit()
+        return redirect(place.path)
+    return render_template("edit_place.html", form=form, place=place)
 
 
 class DeleteItemForm(FlaskForm):

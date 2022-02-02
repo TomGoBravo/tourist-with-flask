@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: Edit {{place.name}}{% endblock %}
+
+{% block head_extras %}
+  <script src="/admin/static/vendor/leaflet/leaflet.js?v=1.0.2"></script>
+  <script src="/admin/static/vendor/leaflet/leaflet.draw.js?v=0.4.6"></script>
+  <script src="/admin/static/admin/js/form.js?v=1.0.1"></script>
+  <link href="/admin/static/vendor/leaflet/leaflet.css?v=1.0.2" rel="stylesheet">
+  <link href="/admin/static/vendor/leaflet/leaflet.draw.css?v=0.4.6" rel="stylesheet">
+
+    <script>
+  window.MAPBOX_MAP_ID = "{{ config.get('MAPBOX_MAP_ID') }}"
+  window.MAPBOX_ACCESS_TOKEN = "{{ config.get('MAPBOX_ACCESS_TOKEN') }}"
+  window.DEFAULT_CENTER_LAT = "1";
+  window.DEFAULT_CENTER_LONG = "1";
+  window.LEAFLET_CONTROL_GEOCODER = true;
+  </script>
+  <!-- Suggest by https://www.npmjs.com/package/leaflet-control-geocoder#usage -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+{% endblock %}
+
+{% block sidedrawercontent %}
+<ul>
+<li><a class="mui-btn" href="/tourist/">Home</a></li>
+<li><a class="mui-btn" href="/tourist/map">Map</a></li>
+<li><a class="mui-btn" href="/tourist/list">List all</a></li>
+<li><a class="mui-btn" href="/tourist/about">About</a></li>
+{% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+{%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+{% endif -%}
+</ul>
+{% endblock %}
+
+{% block headertitle %}Edit {{ place.name }}{% endblock %}
+
+{% block content %}
+
+<p>
+You are editing
+{% for p in place.parents|reverse -%}
+<a href="{{ p.path }}">{{ p.name }}</a> &gt;
+{% endfor -%}
+{{ place.name }}
+</p>
+
+<p>You are looking at the simple edit form. There is a
+<a href="{{ url_for('place.edit_view', id=place.id) }}">complex admin edit interface</a>.</p>
+
+<form class="mui-form" method="POST" action="{{ url_for('.edit_place', place_id=place.id) }}">
+    {{ form.hidden_tag() }}
+    <div class="mui-textfield">
+    <label>Place name</label>{{ form.name(size=20) }}
+    </div>
+    <div class="mui-textfield"><label>General information about the place, not specific to any club.
+Enter the information using
+<a href="https://daringfireball.net/projects/markdown/syntax">markdown syntax</a>.</label>
+    {{ form.markdown(rows=10) }}
+    </div>
+    <div>{{ form.region() }}</div>
+    <div class="mui-textfield">
+        <label>Status as of (date as yyyy-mm-dd)</label>{{ form.status_date(size=20) }}
+    </div>
+    <div class="mui-textfield">
+        <label>Status comment</label>{{ form.status_comment() }}
+    </div>
+    <input type="submit" value="Save" class="mui-btn mui-btn--raised mui-btn--primary">
+</form>
+
+{% endblock %}

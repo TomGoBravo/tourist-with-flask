@@ -3,6 +3,12 @@
 
 {% block htmltitle %}UWHT: Map{% endblock %}
 
+{% block head_extras %}
+<script src='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
+<link href='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+{% endblock %}
 
 {% block sidedrawercontent %}
 <ul>

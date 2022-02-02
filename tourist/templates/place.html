@@ -2,6 +2,13 @@
 
 {% block htmltitle %}UWHT: {{place.name}}{% endblock %}
 
+{% block head_extras %}
+<script src='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
+<link href='//api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+{% endblock %}
+
 {% block sidedrawercontent %}
 <ul>
 {# TODO: Add some kind of indent showing these are nested places. -#}
@@ -21,7 +28,7 @@
 
 {% block headertitle %}{{place.name}}
 {% if current_user.edit_granted -%}<a class="mui-btn mui-btn--primary mui-btn--fab"
-                                      href="{{ url_for('place.edit_view', id=place.id) }}"
+                                      href="{{ url_for('.edit_place', place_id=place.id) }}"
                                       title="Edit place">✎
 </a>
 <a class="mui-btn mui-btn--primary mui-btn--fab"

@@ -56,7 +56,7 @@ class PoolAdminModelView(TouristAdminBaseModelView):
     column_list = ['name', 'short_name', 'entrance', 'markdown', 'parent']
 
 
-admin_views = flask_admin.Admin(base_template='my_master.html')
+admin_views = flask_admin.Admin(base_template='my_master.html', template_mode="bootstrap4")
 admin_views.add_view(PlaceAdminModelView(sqlalchemy.Place, sqlalchemy.db.session, name='Place', endpoint='place'))
 admin_views.add_view(ClubAdminModelView(sqlalchemy.Club, sqlalchemy.db.session, name='Club', endpoint='club'))
 admin_views.add_view(PoolAdminModelView(sqlalchemy.Pool, sqlalchemy.db.session, name='Pool', endpoint='pool'))

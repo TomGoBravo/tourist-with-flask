@@ -1,5 +1,5 @@
 attrs
-git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-nocustomtiles#egg=Flask-Admin
+git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-geoatileattributionurl#egg=Flask-Admin
 geojson>=2.4.1
 SQLAlchemy-Continuum
 Flask
