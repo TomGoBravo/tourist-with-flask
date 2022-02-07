@@ -1,3 +1,5 @@
+from pprint import pprint
+
 import pytest
 from geoalchemy2 import WKTElement
 from pytest import approx
@@ -381,6 +383,10 @@ def test_import_export(test_app):
 
         assert {j['short_name'] for j in json_in} == {j['short_name'] for j in json_out}
 
+        # Remove 'id' from json_out before comparing because it wasn't part of the json when
+        # testentities.jsonl was created.
+        for j in json_out:
+            del j['id']
         assert json_in == json_out
 
 

@@ -20,6 +20,7 @@ sqlalchemy
 pytest
 pip-tools
 humanize  # To format times
+more-itertools
 
 # For testing:
 freezegun

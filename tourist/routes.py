@@ -1,9 +1,17 @@
+import collections
+import datetime
+from typing import List
+from typing import Optional
+
+import attr
 import flask
 import flask_login
 import geojson
+import sqlalchemy_continuum
 import wtforms.validators
 from flask import render_template, Blueprint, redirect, url_for
 from flask_admin.contrib.geoa.fields import GeoJSONField
+from sqlalchemy_continuum import transaction_class
 from wtforms import FormField
 from wtforms.validators import DataRequired
 
@@ -201,6 +209,30 @@ def old_images_file(path):
 def data_all_geojson():
     children_geojson = [p.entrance_geojson_feature for p in sqlalchemy.Pool.query.all() if p.entrance_geojson_feature]
     return geojson.dumps(geojson.FeatureCollection(children_geojson))
+
+
+@attr.s(auto_attribs=True, slots=True)
+class TransactionLog:
+    issued_at: Optional[datetime.datetime]
+    clubs: List[sqlalchemy_continuum.version_class(sqlalchemy.Club)] = attr.ib(factory=list)
+    pools: List[sqlalchemy_continuum.version_class(sqlalchemy.Pool)] = attr.ib(factory=list)
+    places: List[sqlalchemy_continuum.version_class(sqlalchemy.Place)] = attr.ib(factory=list)
+
+
+@tourist_bp.route("/transactionlog")
+def log():
+    manager = sqlalchemy.Club.__versioning_manager__
+    tuples = set(manager.version_class_map.items())
+    Transaction = transaction_class(sqlalchemy.Club)
+    transaction_logs = collections.defaultdict(TransactionLog)
+    for t in Transaction.query.all():
+        transaction_logs[t.id] = TransactionLog(issued_at=t.issued_at)
+
+    ClubVersion = sqlalchemy_continuum.version_class(sqlalchemy.Club)
+    tx_column = manager.option(sqlalchemy.Club, 'transaction_column_name')
+    for club_version in ClubVersion.query.all():
+        transaction_logs[getattr(club_version, tx_column)].clubs.append(club_version)
+    return render_template("transaction_log.html", transactions=transaction_logs.values())
 
 
 @tourist_bp.route("/list")

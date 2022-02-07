@@ -157,17 +157,23 @@ class Place(db.Model):
             return {}
 
     def as_attrib_entity(self):
-        return attrib.Entity(
-            type='place',
-            name=self.name,
-            short_name=self.short_name,
-            markdown=self.markdown,
-            parent_short_name=self.parent and self.parent.short_name or '',
-            region=optional_geometry_to_shape(self.region),
-            geonames_id=self.geonames_id,
-            status_comment=self.status_comment,
-            status_date=self.status_date or None,
-        )
+        parent_short_name = self.parent and self.parent.short_name or ''
+        return place_as_attrib_entity(self, parent_short_name)
+
+
+def place_as_attrib_entity(place, parent_short_name: str):
+    return attrib.Entity(
+        type='place',
+        id=place.id,
+        name=place.name,
+        short_name=place.short_name,
+        markdown=place.markdown,
+        parent_short_name=parent_short_name,
+        region=optional_geometry_to_shape(place.region),
+        geonames_id=place.geonames_id,
+        status_comment=place.status_comment,
+        status_date=place.status_date or None,
+    )
 
 
 class User(db.Model, UserMixin):
@@ -252,15 +258,20 @@ class Club(db.Model):
         return self.parent.path + '#' + self.short_name
 
     def as_attrib_entity(self):
-        return attrib.Entity(
-            type='club',
-            name=self.name,
-            short_name=self.short_name,
-            markdown=self.markdown,
-            parent_short_name=self.parent.short_name,
-            status_comment=self.status_comment,
-            status_date=self.status_date or None,
-        )
+        return club_as_attrib_entity(self, self.parent.short_name)
+
+
+def club_as_attrib_entity(club, parent_short_name: str):
+    return attrib.Entity(
+        type='club',
+        id=club.id,
+        name=club.name,
+        short_name=club.short_name,
+        markdown=club.markdown,
+        parent_short_name=parent_short_name,
+        status_comment=club.status_comment,
+        status_date=club.status_date or None,
+    )
 
 
 class Pool(db.Model):
@@ -326,16 +337,21 @@ class Pool(db.Model):
         return self.parent.path
 
     def as_attrib_entity(self):
-        return attrib.Entity(
-            type='pool',
-            name=self.name,
-            short_name=self.short_name,
-            markdown=self.markdown,
-            parent_short_name=self.parent.short_name,
-            point=optional_geometry_to_shape(self.entrance),
-            status_comment=self.status_comment,
-            status_date=self.status_date or None,
-        )
+        return pool_as_attrib_entity(self, self.parent.short_name)
+
+
+def pool_as_attrib_entity(pool, parent_short_name):
+    return attrib.Entity(
+        type='pool',
+        id=pool.id,
+        name=pool.name,
+        short_name=pool.short_name,
+        markdown=pool.markdown,
+        parent_short_name=parent_short_name,
+        point=optional_geometry_to_shape(pool.entrance),
+        status_comment=pool.status_comment,
+        status_date=pool.status_date or None,
+    )
 
 
 sqlalchemy.orm.configure_mappers()

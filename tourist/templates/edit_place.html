@@ -60,7 +60,10 @@ Enter the information using
 <a href="https://daringfireball.net/projects/markdown/syntax">markdown syntax</a>.</label>
     {{ form.markdown(rows=10) }}
     </div>
-    <div>{{ form.region() }}</div>
+    <div>
+        <label>Draw a box around the region. The box is used to zoom the map to the region
+            but not displayed to visitors.</label>
+        {{ form.region() }}</div>
     <div class="mui-textfield">
         <label>Status as of (date as yyyy-mm-dd)</label>{{ form.status_date(size=20) }}
     </div>

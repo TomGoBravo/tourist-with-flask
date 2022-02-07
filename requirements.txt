@@ -84,7 +84,9 @@ markupsafe==2.0.1
     #   mako
     #   wtforms
 more-itertools==6.0.0
-    # via pytest
+    # via
+    #   -r requirements.in
+    #   pytest
 oauthlib==3.0.1
     # via
     #   flask-dance
