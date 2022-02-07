@@ -1,5 +1,5 @@
 import logging
-
+import os
 
 mapbox_access_token = 'pk.eyJ1IjoidG9tZ29icmF2byIsImEiOiJjajZwZzVyZnYwdGZlMnFvMTZyaXR3bmU3In0.fM7v2OUbs3hsBgwgioVIaA'
 
@@ -25,7 +25,7 @@ class ProdConfig(EnvironmentConfig):
 
 class DevConfig(EnvironmentConfig):
     """ Dev Environment Config """
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + __file__.replace('/config.py', '.db')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.getenv('SQLITE_DB_PATH', __file__.replace('/config.py', '.db'))
     LOG_LEVEL = logging.DEBUG
     EXPLAIN_TEMPLATE_LOADING = False  # This is pretty noisy when enabled.
     USE_FAKE_LOGIN = True

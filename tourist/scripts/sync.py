@@ -41,26 +41,13 @@ class StaticSyncer:
         self.short_name_to_pool[pool.short_name] = pool
 
     def _new_place(self, a):
-        if a.region:
-            region = from_shape(asShape(a.region), srid=4326)
-        else:
-            region = None
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
 
         return sqlalchemy.Place(
             # id isn't set
-            name=a.name,
-            short_name=a.short_name,
-            region=region,
-            markdown=a.markdown,
             parent_id=parent_id,
-            geonames_id=a.geonames_id,
-            status_date=a.status_date,
-            status_comment=a.status_comment,
-            #geocode_request=a.geocode_request,
-            #geocode_result_json=a.geocode_result_json,
-            #geocode_result_time=a.geocode_result_time or None
+            **a.sqlalchemy_kwargs()
         )
 
     def _new_club(self, a: attrib.Entity):
@@ -70,12 +57,8 @@ class StaticSyncer:
 
         return sqlalchemy.Club(
             # id isn't set
-            name=a.name,
-            short_name=a.short_name,
-            markdown=a.markdown,
             parent_id=parent_id,
-            status_date=a.status_date,
-            status_comment=a.status_comment,
+            **a.sqlalchemy_kwargs()
         )
 
     @staticmethod
@@ -185,20 +168,11 @@ class StaticSyncer:
         # Parent is always a place
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
-        if a.point:
-            entrance = from_shape(asShape(a.point), srid=4326)
-        else:
-            entrance = None
 
         return sqlalchemy.Pool(
             # id isn't set
-            name=a.name,
-            short_name=a.short_name,
-            markdown=a.markdown,
             parent_id=parent_id,
-            entrance=entrance,
-            status_date=a.status_date,
-            status_comment=a.status_comment,
+            **a.sqlalchemy_kwargs()
         )
 
 
