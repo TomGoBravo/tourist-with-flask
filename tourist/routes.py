@@ -1,5 +1,7 @@
 import collections
+import csv
 import datetime
+import io
 from typing import List
 from typing import Optional
 
@@ -12,7 +14,6 @@ import wtforms.validators
 from flask import render_template, Blueprint, redirect, url_for
 from flask_admin.contrib.geoa.fields import GeoJSONField
 from sqlalchemy_continuum import transaction_class
-from wtforms import FormField
 from wtforms.validators import DataRequired
 
 import tourist
@@ -256,3 +257,23 @@ def list():
     # This might not be very efficient but works.
     world = sqlalchemy.Place.query.filter_by(short_name='world').one()
     return render_template("list.html", world=world)
+
+
+@tourist_bp.route("/csv")
+def csv_dump():
+    si = io.StringIO()
+    cw = csv.DictWriter(si, extrasaction='ignore',
+                        fieldnames=['type', 'id', 'short_name', 'name', 'parent_short_name',
+                                 'markdown', 'status_date', 'status_comment'])
+    cw.writeheader()
+    for place in sqlalchemy.Place.query.all():
+        cw.writerow(attr.asdict(place.as_attrib_entity()))
+    for club in sqlalchemy.Club.query.all():
+        cw.writerow(attr.asdict(club.as_attrib_entity()))
+    for pool in sqlalchemy.Pool.query.all():
+        cw.writerow(attr.asdict(pool.as_attrib_entity()))
+
+    output = flask.make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
