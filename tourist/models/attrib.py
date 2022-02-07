@@ -79,6 +79,14 @@ class Entity:
             kwargs['entrance'] = from_shape(asShape(self.point), srid=4326)
         return kwargs
 
+    def sqlalchemy_kwargs_with_ids(self):
+        kwargs = self.sqlalchemy_kwargs()
+        if self.id is not None:
+            kwargs['id'] = self.id
+        if self.parent_id is not None:
+            kwargs['parent_id'] = self.parent_id
+        return kwargs
+
     @staticmethod
     def load_from_jsons(jsons: str) -> 'Entity':
         d = json.loads(jsons)

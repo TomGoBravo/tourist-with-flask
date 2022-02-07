@@ -40,7 +40,7 @@ class StaticSyncer:
     def add_existing_pool(self, pool: sqlalchemy.Pool):
         self.short_name_to_pool[pool.short_name] = pool
 
-    def _new_place(self, a):
+    def _new_place(self, a: attrib.Entity):
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
 

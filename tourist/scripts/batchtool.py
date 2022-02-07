@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 from collections import defaultdict
 from typing import Dict
@@ -113,16 +114,17 @@ def transactionshift(write: bool):
     import logging
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    shift_amount = 1123
 
     # From https://stackoverflow.com/a/2337965/341400
     def incr_column(cls, column_name: str):
         # Temporary offset suggested by https://stackoverflow.com/a/22500510/341400 to avoid
         # id collisions.
-        temp_offset = 10_000
+        temp_offset = 100_000
         sqlalchemy.db.session.query(cls).update({
             column_name: getattr(cls, column_name) + temp_offset})
         sqlalchemy.db.session.query(cls).update({
-            column_name: getattr(cls, column_name) - temp_offset + 1})
+            column_name: getattr(cls, column_name) - temp_offset + shift_amount})
 
     for model_cls in (sqlalchemy.Club, sqlalchemy.Pool, sqlalchemy.Place):
         version_cls = sqlalchemy_continuum.version_class(model_cls)
@@ -149,19 +151,39 @@ operation_type_column_name = sqlalchemy_continuum.utils.option(sqlalchemy.Club,
 @attr.s(auto_attribs=True)
 class IdGuesser:
     type_short_name_to_id: Dict[str, Dict[str, int]] = attr.ib(factory=lambda: defaultdict(dict))
+    type_name_to_id: Dict[str, Dict[str, int]] = attr.ib(factory=lambda: defaultdict(dict))
 
     def add_ids(self, entities: List[attrib.Entity]):
         for e in entities:
+            existing_id = self.type_short_name_to_id[e.type].get(e.short_name, None)
+            if existing_id is not None and e.id != existing_id:
+                raise ValueError(f"Id changed for {e} from {existing_id}")
             self.type_short_name_to_id[e.type][e.short_name] = e.id
+
+            if e.name not in ('noname club', 'Acre'):
+                existing_id = self.type_name_to_id[e.type].get(e.name, None)
+                if existing_id is not None and e.id != existing_id:
+                    ValueError(f"Id changed for {e} from {existing_id}")
+                self.type_name_to_id[e.type][e.name] = e.id
         assert set(self.type_short_name_to_id.keys()) == {'pool', 'place', 'club'}
 
     def guess_ids(self, e: attrib.Entity) -> attrib.Entity:
         guesses = {}
+        if e.type == 'pool' and e.name.startswith("Lochot"):
+            e.id = 247
+        if e.type == 'pool' and e.name.startswith("Burpengary Regional Aquatic"):
+            e.id = 6
+
+
         if e.parent_short_name and e.parent_id is None:
             guesses['parent_id'] = self.type_short_name_to_id['place'][e.parent_short_name]
 
         if e.id is None:
-            guesses['id'] = self.type_short_name_to_id[e.type][e.short_name]
+            by_short_name = self.type_short_name_to_id[e.type].get(e.short_name, None)
+            if by_short_name:
+                guesses['id'] = by_short_name
+            else:
+                guesses['id'] = self.type_name_to_id[e.type][e.name]
 
         if guesses:
             return attr.evolve(e, **guesses)
@@ -185,14 +207,14 @@ class VersionTable:
             if entity.short_name != 'world':
                 raise ValueError(f"Expected ever entity except world with parent_id: {entity}")
 
-        sqlalchemy_kwargs = entity.sqlalchemy_kwargs()
+        sqlalchemy_kwargs = entity.sqlalchemy_kwargs_with_ids()
         new_version_object = self.version_cls(**sqlalchemy_kwargs)
         # operation_type and transaction_id raise 'invalid keyword argument for PlaceVersion'
         # when passed to the constructor so instead set them after the object is created.
         if entity.id in self.versions:
-            new_version_object.operation_type = sqlalchemy_continuum.operation.Operation.INSERT
+            new_version_object.operation_type = sqlalchemy_continuum.Operation.INSERT
         else:
-            new_version_object.operation_type = sqlalchemy_continuum.operation.Operation.UPDATE
+            new_version_object.operation_type = sqlalchemy_continuum.Operation.UPDATE
         new_version_object.transaction_id = transaction.id
         self.new_objects.append(new_version_object)
         self.add_version_object(transaction, new_version_object)
@@ -211,6 +233,11 @@ class VersionTable:
     def latest_versions(self):
         return [last(version_list) for version_list in self.versions.values()]
 
+    def live_versions(self):
+        for version_obj in self.latest_versions():
+            if version_obj.operation_type != sqlalchemy_continuum.Operation.DELETE:
+                yield version_obj
+
 
 type_to_version_cls = {
     'place': PlaceVersion,
@@ -224,7 +251,7 @@ class VersionSyncer:
     """Creates version history
     """
     version_tables: Dict[Type, VersionTable]
-    new_transaction_ids: List[int] = attr.ib(factory=list)
+    new_transaction_ids: Set[int] = attr.ib(factory=set)
 
     @staticmethod
     def make() -> 'VersionSyncer':
@@ -235,9 +262,10 @@ class VersionSyncer:
     def add_entity(self, e: attrib.Entity, transaction: Transaction):
         version_cls = type_to_version_cls[e.type]
         self.version_tables[version_cls].add_entity(transaction, e)
-        self.new_transaction_ids.append(transaction.id)
+        self.new_transaction_ids.add(transaction.id)
 
     def replay_transaction(self, transaction: Transaction):
+        assert transaction.id not in self.new_transaction_ids
         for version_cls, cls_changed_entities in transaction.changed_entities.items():
             for version_obj in cls_changed_entities:
                 self.version_tables[version_cls].add_version_object(transaction, version_obj)
@@ -246,50 +274,102 @@ class VersionSyncer:
         place_id_to_short_name = {
             place.id: place.short_name for place in self.version_tables[PlaceVersion].latest_versions()
         }
+        # Special case expected only for place with short_name 'world'
+        place_id_to_short_name[None] = ''
         entities = []
-        for version_obj in self.version_tables[PoolVersion].latest_versions():
-            parent_short_name = place_id_to_short_name.get(version_obj.parent_id, '')
+        for version_obj in self.version_tables[PoolVersion].live_versions():
+            parent_short_name = place_id_to_short_name[version_obj.parent_id]
             entities.append(sqlalchemy.pool_as_attrib_entity(version_obj, parent_short_name))
-        for version_obj in self.version_tables[ClubVersion].latest_versions():
-            parent_short_name = place_id_to_short_name.get(version_obj.parent_id, '')
+        for version_obj in self.version_tables[ClubVersion].live_versions():
+            parent_short_name = place_id_to_short_name[version_obj.parent_id]
             entities.append(sqlalchemy.club_as_attrib_entity(version_obj, parent_short_name))
-        for version_obj in self.version_tables[PlaceVersion].latest_versions():
-            parent_short_name = place_id_to_short_name.get(version_obj.parent_id, '')
+        for version_obj in self.version_tables[PlaceVersion].live_versions():
+            parent_short_name = place_id_to_short_name[version_obj.parent_id]
             entities.append(sqlalchemy.place_as_attrib_entity(version_obj, parent_short_name))
         return sync.sort_entities(entities)
 
 
+@attr.s(auto_attribs=True)
+class ChangeFromLog:
+    issued_at: datetime.datetime
+    user_id: int
+    entity: attrib.Entity
+
+
+def extract_logs(change_log_path: str, id_guesser: IdGuesser):
+    for line in open(change_log_path).readlines():
+        m = re.fullmatch(r'\[([\d\:\,\. -]+)\].+Change by <User (\d+)>: (\{.+\})\s*$', line)
+        if not m:
+            raise ValueError(f"Couldn't match '{line}'")
+        # Log has , decimal separator
+        dt = datetime.datetime.fromisoformat(m.group(1).replace(',', '.'))
+        user_id = int(m.group(2))
+        entity = attrib.Entity.load_from_jsons(m.group(3))
+        if entity.short_name == 'remove':
+            continue
+        entity = id_guesser.guess_ids(entity)
+        change = ChangeFromLog(dt, user_id, entity)
+        yield change
+
+
+def group_changes(changes_in: Iterable[ChangeFromLog]) -> Iterable[List[ChangeFromLog]]:
+    # Group changes within one second of each other
+    group = []
+    for c in changes_in:
+        if group and abs(c.issued_at.timestamp() - last(group).issued_at.timestamp()) > 1:
+            yield group
+            group = []
+        group.append(c)
+    if group:
+        yield group
+
+
 @batchtool_cli.command('transactioninsert1')
-@click.argument('input_path')
+@click.option('--initial-snapshot', default='tourist-20190312T091406.jsonl')
 @click.argument('output_path')
+@click.option('--change-log', default='tourist-20220207-change-by.log')
 @click.option('--commit', is_flag=True)
-def transactioninsert1(input_path: str, output_path: str, commit: bool):
+@click.option('--extra-ids', default='tourist-20220207T0753.jsonl')
+def transactioninsert1(initial_snapshot: str, change_log: str, output_path: str,
+                       extra_ids: str, commit: bool):
+    """Attempt at inserting changes from a log file, abandoned because when I finally got it
+    running the log file was missing details for every insert, rendering the transaction log
+    very incomplete and even more of a mess to clean up."""
     import logging
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-
-    jsonlines = open(input_path).readlines()
-    entities = [attrib.Entity.load_from_jsons(j) for j in jsonlines]
-
-    transactions = Transaction.query.all()
-
-    new_trans = sqlalchemy_continuum.transaction_class(sqlalchemy.Club)(id=1,
-                                                                        issued_at=datetime.datetime.fromisoformat("2022-01-01"))
-    assert new_trans.id not in {t.id for t in transactions}
+    jsonlines = open(initial_snapshot).readlines()
+    entities_for_inital_snapshot = [attrib.Entity.load_from_jsons(j) for j in jsonlines]
 
     id_guesser = IdGuesser()
-    id_guesser.add_ids(entities)
-    entities = [id_guesser.guess_ids(e) for e in entities]
+    id_guesser.add_ids(entities_for_inital_snapshot)
+
+    if extra_ids:
+        extra_for_ids = [attrib.Entity.load_from_jsons(j) for j in open(extra_ids).readlines()]
+        id_guesser.add_ids(extra_for_ids)
 
     syncer = VersionSyncer.make()
 
-    for e in entities:
-        syncer.add_entity(e, new_trans)
+    next_transaction_id = 1
+    initial_snapshot_issued_at = datetime.datetime.fromisoformat("2019-03-12T00:00:00")
+    entities_for_inital_snapshot = [id_guesser.guess_ids(e) for e in entities_for_inital_snapshot]
+    for e in entities_for_inital_snapshot:
+        syncer.add_entity(e, Transaction(id=next_transaction_id, issued_at=initial_snapshot_issued_at))
+        next_transaction_id += 1
 
+    for changes_list in group_changes(extract_logs(change_log, id_guesser)):
+        transaction = Transaction(id=next_transaction_id, issued_at=changes_list[0].issued_at,
+                                  user_id=changes_list[0].user_id)
+        next_transaction_id += 1
+        for change in changes_list:
+            syncer.add_entity(change.entity, transaction)
+
+    existing_transactions = Transaction.query.all()
+    assert next_transaction_id <= min(e.id for e in existing_transactions)
     # Replay transactions to set the end_transaction_id on version objects that are changed
     # later.
-    for t in transactions:
+    for t in existing_transactions:
         syncer.replay_transaction(t)
 
     out = open(output_path, 'w')

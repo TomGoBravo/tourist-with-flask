@@ -22,8 +22,19 @@
 <ul>
 {% for t in transactions %}
     <li>{{ t.issued_at.isoformat() }}
+    <ul>{% for place_version in t.places %}
+            <li><b>{{place_version.name}}</b>
+                {{place_version.changeset}}</li>
+        {% endfor %}
+    </ul>
     <ul>{% for club_version in t.clubs %}
-            <li>{{club_version.changeset}}</li>
+        <li><b>{{club_version.name}}</b>
+            {{club_version.changeset}}</li>
+        {% endfor %}
+    </ul>
+    <ul>{% for pool_version in t.pools %}
+        <li><b>{{pool_version.name}}</b>
+        {{pool_version.changeset}}</li>
         {% endfor %}
     </ul>
     </li>

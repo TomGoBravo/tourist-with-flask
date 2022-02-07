@@ -51,11 +51,17 @@ def place_short_name(short_name):
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, DateField, BooleanField, FieldList
 
+
+def false_as_none(x):
+    # Thanks to https://stackoverflow.com/a/21853689/341400
+    return x or None
+
+
 class ClubForm(FlaskForm):
     name = StringField('name', validators=[DataRequired()])
     markdown = TextAreaField('markdown')
-    status_date = StringField('status_date')
-    status_comment = StringField('status_comment')
+    status_date = StringField('status_date', filters=[false_as_none])
+    status_comment = StringField('status_comment', filters=[false_as_none])
 
 
 @tourist_bp.route("/edit/club/<int:club_id>", methods=['GET', 'POST'])
@@ -77,8 +83,8 @@ class PlaceForm(FlaskForm):
     name = StringField('name', validators=[DataRequired()])
     markdown = TextAreaField('markdown')
     region = GeoJSONField('region', srid=4326, session=sqlalchemy.db.session, geometry_type="POLYGON")
-    status_date = StringField('status_date')
-    status_comment = StringField('status_comment')
+    status_date = StringField('status_date', filters=[false_as_none])
+    status_comment = StringField('status_comment', filters=[false_as_none])
 
 
 @tourist_bp.route("/edit/place/<int:place_id>", methods=['GET', 'POST'])
@@ -211,27 +217,37 @@ def data_all_geojson():
     return geojson.dumps(geojson.FeatureCollection(children_geojson))
 
 
+Transaction = transaction_class(sqlalchemy.Club)
+ClubVersion = sqlalchemy_continuum.version_class(sqlalchemy.Club)
+PlaceVersion = sqlalchemy_continuum.version_class(sqlalchemy.Place)
+PoolVersion = sqlalchemy_continuum.version_class(sqlalchemy.Pool)
+
+
 @attr.s(auto_attribs=True, slots=True)
 class TransactionLog:
     issued_at: Optional[datetime.datetime]
-    clubs: List[sqlalchemy_continuum.version_class(sqlalchemy.Club)] = attr.ib(factory=list)
-    pools: List[sqlalchemy_continuum.version_class(sqlalchemy.Pool)] = attr.ib(factory=list)
-    places: List[sqlalchemy_continuum.version_class(sqlalchemy.Place)] = attr.ib(factory=list)
+    clubs: List[ClubVersion] = attr.ib(factory=list)
+    pools: List[PoolVersion] = attr.ib(factory=list)
+    places: List[PlaceVersion] = attr.ib(factory=list)
 
 
 @tourist_bp.route("/transactionlog")
 def log():
     manager = sqlalchemy.Club.__versioning_manager__
-    tuples = set(manager.version_class_map.items())
-    Transaction = transaction_class(sqlalchemy.Club)
+    tx_column = manager.option(sqlalchemy.Club, 'transaction_column_name')
     transaction_logs = collections.defaultdict(TransactionLog)
     for t in Transaction.query.all():
         transaction_logs[t.id] = TransactionLog(issued_at=t.issued_at)
 
-    ClubVersion = sqlalchemy_continuum.version_class(sqlalchemy.Club)
-    tx_column = manager.option(sqlalchemy.Club, 'transaction_column_name')
     for club_version in ClubVersion.query.all():
         transaction_logs[getattr(club_version, tx_column)].clubs.append(club_version)
+
+    for place_version in PlaceVersion.query.all():
+        transaction_logs[getattr(place_version, tx_column)].places.append(place_version)
+
+    for pool_version in PoolVersion.query.all():
+        transaction_logs[getattr(pool_version, tx_column)].pools.append(pool_version)
+
     return render_template("transaction_log.html", transactions=transaction_logs.values())
 
 
