@@ -26,8 +26,6 @@ class ProdConfig(EnvironmentConfig):
 class DevConfig(EnvironmentConfig):
     """ Dev Environment Config """
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.getenv('SQLITE_DB_PATH', __file__.replace('/config.py', '.db'))
-    #SQLALCHEMY_DATABASE_URI = 'sqlite:////home/thecap/code/tourist-with-flask/tourist-production
-    # -20220112.db'
     LOG_LEVEL = logging.DEBUG
     EXPLAIN_TEMPLATE_LOADING = False  # This is pretty noisy when enabled.
     USE_FAKE_LOGIN = True
