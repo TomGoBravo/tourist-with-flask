@@ -229,6 +229,24 @@ def add_and_return_edit_granted_user(test_app):
 def test_club_without_status_date(test_app):
     add_some_entities(test_app)
 
+    with test_app.app_context():
+        assert not sqlalchemy.Club.query.filter_by(short_name='shortie').one().status_date
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/place/metro')
+        assert response.status_code == 200
+        assert 'Foo Club plays' in response.get_data(as_text=True)
+
+
+def test_club_with_bad_pool_link(test_app):
+    add_some_entities(test_app)
+
+    with test_app.app_context():
+        club = sqlalchemy.Club.query.filter_by(short_name='shortie').one()
+        club.markdown += " * [[badpoollink]]\n"
+        sqlalchemy.db.session.add(club)
+        sqlalchemy.db.session.commit()
+
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
         assert response.status_code == 200

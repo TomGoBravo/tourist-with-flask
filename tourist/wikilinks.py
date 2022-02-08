@@ -37,14 +37,17 @@ class WikiLinksInlineProcessor(InlineProcessor):
         self.config = config
 
     def handleMatch(self, m, data):
-        if m.group(1).strip():
-            label = m.group(1).strip()
+        label = m.group(1).strip()
+        if label:
             pool = sqlalchemy.Pool.query.filter_by(short_name=label).one_or_none()
-            a = etree.Element('a')
-            a.text = pool.name
-            # All links are internal to the HTML page generated for a single place, at least for
-            # now. scripts/batchtool.py looks for links that might go between pages.
-            a.set('href', f'#{label}')
+            if pool:
+                a = etree.Element('a')
+                a.text = pool.name
+                # All links are internal to the HTML page generated for a single place, at least for
+                # now. scripts/batchtool.py looks for links that might go between pages.
+                a.set('href', f'#{label}')
+            else:
+                a = f'[[{label}]]'
         else:
             a = ''
         return a, m.start(0), m.end(0)
