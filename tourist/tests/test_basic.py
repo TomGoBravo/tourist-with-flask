@@ -188,7 +188,7 @@ def add_some_entities(test_app):
         )
         country = sqlalchemy.Place(
             name='Country Name',
-            short_name='country',
+            short_name='cc',
             parent_id=1,
             region=WKTElement(
                 'POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
@@ -308,7 +308,7 @@ def test_delete_place(test_app):
         response = c.post(f'/tourist/delete/place/3', data=dict(confirm=True,
                                                              csrf_token=c.csrf_token))
         assert response.status_code == 302
-        assert response.location.endswith('/tourist/place/country')
+        assert response.location.endswith('/tourist/place/cc')
 
     with test_app.app_context():
         assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
@@ -384,6 +384,19 @@ def test_page_not_found(test_app):
     with test_app.test_client() as c:
         response = c.get('/tourist/page/notfound')
         assert response.status_code == 404
+
+
+def test_uwht_redirect(test_app):
+    add_some_entities(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/uwht', follow_redirects=True)
+        assert response.status_code == 200
+        assert response.request.path == "/tourist/"
+
+        response = c.get('/uwht?country=cc', follow_redirects=True)
+        assert response.status_code == 200
+        assert response.request.path == "/tourist/place/cc"
 
 
 def test_import_export(test_app):

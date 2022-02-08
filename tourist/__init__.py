@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from logging.handlers import RotatingFileHandler
 import logging
 import os.path
@@ -86,10 +87,19 @@ def create_app(default_config_object=config['dev']):
     app.logger.debug('Initialising Blueprints')
     from .routes import tourist_bp
     app.register_blueprint(tourist_bp, url_prefix='/tourist')
+
     @app.route('/')
     @app.route('/index.html')
     def pucku_home():
         return app.send_static_file('pucku/index.html')
+
+    @app.route('/uwht/')
+    def uwht_redirect():
+        country_code = flask.request.args.get('country', None)
+        if country_code and re.fullmatch(r'[a-z]{2}', country_code):
+            return flask.redirect(f'/tourist/place/{country_code}')
+        else:
+            return flask.redirect('/tourist/')
 
     if app.config.get('USE_FAKE_LOGIN'):
         from .fake_login import fake_login_bp as login_bp, login_manager
