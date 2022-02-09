@@ -45,8 +45,10 @@ def about():
 def place_short_name(short_name):
     if short_name == 'world':
         return redirect(url_for('.home'))
-    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one()
-    return render_template("place.html", place=place, mapbox_access_token=mapbox_access_token())
+    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
+    if place:
+        return render_template("place.html", place=place, mapbox_access_token=mapbox_access_token())
+    flask.abort(404)
 
 
 from flask_wtf import FlaskForm
@@ -195,7 +197,7 @@ def page_short_name(short_name):
     place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
     if place:
         return redirect(place.path)
-    return flask.render_template('404.html'), 404
+    flask.abort(404)
 
 
 @tourist_bp.route("/<string:short_name>.html")

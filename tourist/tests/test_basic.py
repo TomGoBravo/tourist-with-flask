@@ -386,6 +386,12 @@ def test_page_not_found(test_app):
         assert response.status_code == 404
 
 
+def test_place_not_found(test_app):
+    with test_app.test_client() as c:
+        response = c.get('/tourist/place/notfound')
+        assert response.status_code == 404
+
+
 def test_uwht_redirect(test_app):
     add_some_entities(test_app)
 
