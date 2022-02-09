@@ -11,6 +11,7 @@ fake_login_bp = Blueprint('github', __name__)
 
 login_manager = LoginManager()
 login_manager.login_view = 'github.login'
+login_manager.anonymous_user = sqlalchemy.AnonymousUser
 
 
 @login_manager.user_loader

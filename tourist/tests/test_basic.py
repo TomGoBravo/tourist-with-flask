@@ -238,6 +238,18 @@ def test_club_without_status_date(test_app):
         assert 'Foo Club plays' in response.get_data(as_text=True)
 
 
+def test_list(test_app):
+    add_some_entities(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/list')
+        assert response.status_code == 200
+        assert 'Country Name' in response.get_data(as_text=True)
+        assert 'Metro Name' in response.get_data(as_text=True)
+        assert 'Foo Club' in response.get_data(as_text=True)
+        assert 'Metro Pool' in response.get_data(as_text=True)
+
+
 def test_club_with_bad_pool_link(test_app):
     add_some_entities(test_app)
 

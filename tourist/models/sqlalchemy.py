@@ -8,7 +8,7 @@ from typing import List
 import geojson
 import attr
 from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
-from flask_login import UserMixin
+import flask_login
 from geoalchemy2 import Geometry, WKTElement, WKBElement
 from shapely.geometry.base import BaseGeometry
 import sqlalchemy
@@ -149,6 +149,15 @@ class Place(db.Model):
     def _descendant_pools(self):
         return self.child_pools + list(chain.from_iterable(p.child_pools for p in self.descendant_places))
 
+    @property
+    def geojson_children_collection(self):
+        children_geojson = [p.entrance_geojson_feature for p in self._descendant_pools if
+                            p.entrance_geojson_feature]
+        if children_geojson:
+            return geojson.FeatureCollection(children_geojson)
+        else:
+            return {}
+
     def as_attrib_entity(self):
         parent_short_name = self.parent and self.parent.short_name or ''
         return place_as_attrib_entity(self, parent_short_name)
@@ -172,19 +181,8 @@ def place_as_attrib_entity(place, parent_short_name: str):
 class PlacePrecomputed(db.Model):
     id = db.Column(db.Integer, db.ForeignKey(Place.id), primary_key=True)
 
-    @property
-    def geojson_children_collection(self):
-        children_geojson = [p.entrance_geojson_feature for p in self.place._descendant_pools if
-                            p.entrance_geojson_feature]
-        if children_geojson:
-            return geojson.FeatureCollection(children_geojson)
-        else:
-            return {}
 
-
-
-
-class User(db.Model, UserMixin):
+class User(db.Model, flask_login.UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     # Your User model can include whatever columns you want: Flask-Dance doesn't care.
     # Here are a few columns you might find useful, but feel free to modify them
@@ -193,6 +191,11 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(256), unique=True)
     name = db.Column(db.String(256))
     edit_granted = db.Column(db.Boolean, default=False)
+
+
+# Anonymous user with same attributes as a logged in `User` for consistency in templates.
+class AnonymousUser(flask_login.AnonymousUserMixin):
+    edit_granted = False
 
 
 class OAuth(OAuthConsumerMixin, db.Model):

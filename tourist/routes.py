@@ -17,7 +17,8 @@ from sqlalchemy_continuum import transaction_class
 from wtforms.validators import DataRequired
 
 import tourist
-from .models import sqlalchemy
+from tourist import render_factory
+from tourist.models import sqlalchemy
 
 tourist_bp = Blueprint('tourist_bp', __name__)
 
@@ -28,7 +29,8 @@ def mapbox_access_token():
 @tourist_bp.route("/")
 def home():
     world = sqlalchemy.Place.query.filter_by(short_name='world').first()
-    return render_template("home.html", world=world, mapbox_access_token=mapbox_access_token())
+    render_world = render_factory.build_render_place(world)
+    return render_template("home.html", world=render_world, mapbox_access_token=mapbox_access_token())
 
 
 @tourist_bp.route("/map")
@@ -47,7 +49,9 @@ def place_short_name(short_name):
         return redirect(url_for('.home'))
     place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
     if place:
-        return render_template("place.html", place=place, mapbox_access_token=mapbox_access_token())
+        render_place = render_factory.build_render_place(place)
+        return render_template("place.html", place=render_place,
+                               mapbox_access_token=mapbox_access_token())
     flask.abort(404)
 
 
@@ -258,7 +262,8 @@ def log():
 def list():
     # This might not be very efficient but works.
     world = sqlalchemy.Place.query.filter_by(short_name='world').one()
-    return render_template("list.html", world=world)
+    render_world = render_factory.build_place_recursive_names(world)
+    return render_template("list.html", world=render_world)
 
 
 @tourist_bp.route("/csv")

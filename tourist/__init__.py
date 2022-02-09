@@ -6,6 +6,7 @@ import logging
 import os.path
 import flask
 import humanize
+import jinja2
 import markdown
 import markdown.extensions.wikilinks
 from flask import current_app
@@ -53,6 +54,7 @@ def create_app(default_config_object=config['dev']):
         print('Loading secrets.cfg')
         app.config.from_pyfile('secrets.cfg')
     app.config.from_envvar('TOURIST_CONFIG_FILE', silent=True)
+    # app.jinja_options["undefined"] = jinja2.StrictUndefined
     app.jinja_env.filters['humanize_date_str'] = humanize_date_str
 
     initialise_logger(app)

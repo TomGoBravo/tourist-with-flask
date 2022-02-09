@@ -6,7 +6,8 @@ from flask_login import (
 from sqlalchemy.orm.exc import NoResultFound
 from flask_dance.consumer import oauth_authorized, oauth_error
 from flask import flash, redirect
-from .models.sqlalchemy import User, OAuth, db
+from .models.sqlalchemy import OAuth, db
+import models.sqlalchemy
 
 github_blueprint = make_github_blueprint()
 # url_prefix="/login" is set when registering this blueprint
@@ -14,11 +15,12 @@ github_blueprint = make_github_blueprint()
 # setup login manager
 login_manager = LoginManager()
 login_manager.login_view = 'github.login'
+login_manager.anonymous_user = models.sqlalchemy.AnonymousUser
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    u = User.query.get(int(user_id))
+    u = models.sqlalchemy.User.query.get(int(user_id))
     return u
 
 
