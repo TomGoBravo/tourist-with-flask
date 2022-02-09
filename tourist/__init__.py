@@ -4,6 +4,8 @@ import re
 from logging.handlers import RotatingFileHandler
 import logging
 import os.path
+
+import attrs
 import flask
 import humanize
 import jinja2
@@ -11,6 +13,7 @@ import markdown
 import markdown.extensions.wikilinks
 from flask import current_app
 
+from tourist import render_factory
 from tourist.models import sqlalchemy
 from sqlalchemy import event
 from tourist.config import config
@@ -54,7 +57,7 @@ def create_app(default_config_object=config['dev']):
         print('Loading secrets.cfg')
         app.config.from_pyfile('secrets.cfg')
     app.config.from_envvar('TOURIST_CONFIG_FILE', silent=True)
-    # app.jinja_options["undefined"] = jinja2.StrictUndefined
+    app.jinja_options["undefined"] = jinja2.Undefined
     app.jinja_env.filters['humanize_date_str'] = humanize_date_str
 
     initialise_logger(app)
@@ -133,6 +136,17 @@ def create_app(default_config_object=config['dev']):
             instance.validate()
             entity = instance.as_attrib_entity()
             app.logger.info(f'Change by {current_user}: {entity.dump_as_jsons()}')
+
+        for instance in session.new | session.dirty | session.deleted:
+            if hasattr(instance, 'as_attrib_entity'):
+                session.info['update_render_after_flush'] = True
+                break
+
+    @event.listens_for(db.session, "after_flush_postexec")
+    def after_flush_postexec(session, flush_context):
+        if session.info.get('update_render_after_flush', False):
+            session.add_all(render_factory.yield_cache())
+            del session.info['update_render_after_flush']
 
     return app
 

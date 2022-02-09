@@ -3,6 +3,8 @@ from pprint import pprint
 import pytest
 from geoalchemy2 import WKTElement
 from pytest import approx
+
+import tourist.models.render
 from tourist.scripts.sync import StaticSyncer
 from tourist.tests.conftest import no_expire_on_commit
 from tourist.tests.conftest import path_relative
@@ -167,13 +169,13 @@ def test_club_status_state():
     c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
                         status_date='2021-01-15')
     with freeze_time("2022-01-15"):
-        assert c.club_state == sqlalchemy.ClubState.CURRENT
+        assert c.club_state == tourist.models.render.ClubState.CURRENT
     with freeze_time("2022-01-16"):
-        assert c.club_state == sqlalchemy.ClubState.STALE
+        assert c.club_state == tourist.models.render.ClubState.STALE
 
     c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
                         status_date='')
-    assert c.club_state == sqlalchemy.ClubState.STALE
+    assert c.club_state == tourist.models.render.ClubState.STALE
     c.validate()
 
 
@@ -182,7 +184,8 @@ def add_some_entities(test_app):
         world = sqlalchemy.Place(
             name='World',
             short_name='world',
-            region=WKTElement('POLYGON(EMPTY)', srid=4326),
+            region=WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
+                '150.90 -34.42))', srid=4326),
             id=1,
             markdown='',
         )

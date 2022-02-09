@@ -1,14 +1,12 @@
 import collections
-import csv
 import datetime
-import io
 from typing import List
 from typing import Optional
 
 import attr
+import attrs
 import flask
 import flask_login
-import geojson
 import sqlalchemy_continuum
 import wtforms.validators
 from flask import render_template, Blueprint, redirect, url_for
@@ -22,14 +20,14 @@ from tourist.models import sqlalchemy
 
 tourist_bp = Blueprint('tourist_bp', __name__)
 
+
 def mapbox_access_token():
     return sqlalchemy.db.get_app().config['MAPBOX_ACCESS_TOKEN']
 
 
 @tourist_bp.route("/")
 def home():
-    world = sqlalchemy.Place.query.filter_by(short_name='world').first()
-    render_world = render_factory.build_render_place(world)
+    render_world = render_factory.get_place('world')
     return render_template("home.html", world=render_world, mapbox_access_token=mapbox_access_token())
 
 
@@ -47,12 +45,9 @@ def about():
 def place_short_name(short_name):
     if short_name == 'world':
         return redirect(url_for('.home'))
-    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
-    if place:
-        render_place = render_factory.build_render_place(place)
-        return render_template("place.html", place=render_place,
-                               mapbox_access_token=mapbox_access_token())
-    flask.abort(404)
+    render_place = render_factory.get_place(short_name)
+    return render_template("place.html", place=render_place,
+                           mapbox_access_token=mapbox_access_token())
 
 
 from flask_wtf import FlaskForm
@@ -220,8 +215,7 @@ def old_images_file(path):
 
 @tourist_bp.route("/data/pools.geojson")
 def data_all_geojson():
-    children_geojson = [p.entrance_geojson_feature for p in sqlalchemy.Pool.query.all() if p.entrance_geojson_feature]
-    return geojson.dumps(geojson.FeatureCollection(children_geojson))
+    return render_factory.get_string(render_factory.RenderName.POOLS_GEOJSON)
 
 
 Transaction = transaction_class(sqlalchemy.Club)
@@ -260,27 +254,14 @@ def log():
 
 @tourist_bp.route("/list")
 def list():
-    # This might not be very efficient but works.
-    world = sqlalchemy.Place.query.filter_by(short_name='world').one()
-    render_world = render_factory.build_place_recursive_names(world)
+    render_world = render_factory.get_place_names_world()
     return render_template("list.html", world=render_world)
 
 
 @tourist_bp.route("/csv")
 def csv_dump():
-    si = io.StringIO()
-    cw = csv.DictWriter(si, extrasaction='ignore',
-                        fieldnames=['type', 'id', 'short_name', 'name', 'parent_short_name',
-                                 'markdown', 'status_date', 'status_comment'])
-    cw.writeheader()
-    for place in sqlalchemy.Place.query.all():
-        cw.writerow(attr.asdict(place.as_attrib_entity()))
-    for club in sqlalchemy.Club.query.all():
-        cw.writerow(attr.asdict(club.as_attrib_entity()))
-    for pool in sqlalchemy.Pool.query.all():
-        cw.writerow(attr.asdict(pool.as_attrib_entity()))
-
-    output = flask.make_response(si.getvalue())
+    csv_str = render_factory.get_string(render_factory.RenderName.CSV_ALL)
+    output = flask.make_response(csv_str)
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"
     return output

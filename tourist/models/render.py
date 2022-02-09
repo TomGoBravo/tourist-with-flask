@@ -4,12 +4,23 @@ instances of them from the sqlalchemy model objects. This additional layer of ab
 decouples the templates from the database schema. Instances can be cached to render HTML without
 loading heaps of objects from the database.
 """
+import datetime
+from enum import Enum
+from enum import unique
 
 from typing import Dict
+from typing import ForwardRef
 from typing import List
 from typing import Optional
 
 import attrs
+import cattrs
+
+
+@unique
+class ClubState(Enum):
+    CURRENT = '\N{HEAVY CHECK MARK}'
+    STALE = '?'
 
 
 @attrs.frozen()
@@ -19,6 +30,17 @@ class Club:
     short_name: str
     markdown: str
     status_date: Optional[str]
+
+    @property
+    def club_state(self) -> ClubState:
+        if not self.status_date:
+            return ClubState.STALE
+
+        d = datetime.datetime.fromisoformat(self.status_date)
+        if (datetime.datetime.now() - d) > datetime.timedelta(days=365):
+            return ClubState.STALE
+        else:
+            return ClubState.CURRENT
 
 
 @attrs.frozen()
@@ -82,3 +104,15 @@ class PlaceRecursiveNames:
     @attrs.frozen()
     class Pool:
         name: str
+
+
+# From https://github.com/python-attrs/cattrs/issues/13#issuecomment-624213402
+cattrs.register_structure_hook(
+    ForwardRef("PlaceRecursiveNames"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames),
+)
+cattrs.register_structure_hook(
+    ForwardRef("PlaceRecursiveNames.Club"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames.Club),
+)
+cattrs.register_structure_hook(
+    ForwardRef("PlaceRecursiveNames.Pool"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames.Pool),
+)

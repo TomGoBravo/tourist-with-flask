@@ -13,10 +13,9 @@ from geoalchemy2 import Geometry, WKTElement, WKBElement
 from shapely.geometry.base import BaseGeometry
 import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from shapely.geometry import mapping as shapely_mapping
 import shapely
-from geoalchemy2.shape import from_shape, to_shape
+from geoalchemy2.shape import to_shape
 
 
 # Copying https://stackoverflow.com/q/51065521/341400
@@ -24,6 +23,7 @@ from sqlalchemy_continuum import make_versioned
 from sqlalchemy_continuum.plugins import FlaskPlugin
 
 from tourist.models import attrib
+from tourist.models.render import ClubState
 
 db = SQLAlchemy()
 # FLASK_APP=tourist flask db migrate
@@ -81,8 +81,6 @@ class Place(db.Model):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
     geonames_id = db.Column(db.Integer, nullable=True)
-
-    precomputed = db.relationship('PlacePrecomputed', backref='place', uselist=False)
 
     __versioned__ = {}
 
@@ -178,10 +176,6 @@ def place_as_attrib_entity(place, parent_short_name: str):
     )
 
 
-class PlacePrecomputed(db.Model):
-    id = db.Column(db.Integer, db.ForeignKey(Place.id), primary_key=True)
-
-
 class User(db.Model, flask_login.UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     # Your User model can include whatever columns you want: Flask-Dance doesn't care.
@@ -213,13 +207,6 @@ club_pools = db.Table('club_pools',
 )
 
 
-from enum import Enum, unique
-@unique
-class ClubState(Enum):
-    CURRENT = '\N{HEAVY CHECK MARK}'
-    STALE = '?'
-
-
 class Club(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -233,17 +220,6 @@ class Club(db.Model):
     status_date = db.Column(db.String, nullable=True)
 
     __versioned__ = {}
-
-    @property
-    def club_state(self) -> ClubState:
-        if not self.status_date:
-            return ClubState.STALE
-
-        d = datetime.datetime.fromisoformat(self.status_date)
-        if (datetime.datetime.now() - d) > datetime.timedelta(days=365):
-            return ClubState.STALE
-        else:
-            return ClubState.CURRENT
 
     def __str__(self):
         if self.parent:
@@ -363,6 +339,37 @@ def pool_as_attrib_entity(pool, parent_short_name):
         status_comment=pool.status_comment,
         status_date=pool.status_date or None,
     )
+
+
+from sqlalchemy.types import TypeDecorator, VARCHAR
+import json
+
+class JSONEncodedDict(TypeDecorator):
+    """Represents an immutable structure as a json-encoded string.
+    Usage::
+        JSONEncodedDict(255)
+    From https://docs.sqlalchemy.org/en/14/core/custom_types.html#marshal-json-strings
+    """
+    impl = VARCHAR
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value, indent=None, separators=(',', ':'))
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
+
+
+class RenderCache(db.Model):
+    name = db.Column(db.String, primary_key=True, nullable=False, unique=True,
+                     sqlite_on_conflict_primary_key='REPLACE')
+    value_str = db.Column(db.String)
+    value_dict = db.Column(JSONEncodedDict)
+
 
 
 sqlalchemy.orm.configure_mappers()

@@ -1,10 +1,24 @@
+import csv
+import enum
+import io
 from typing import Iterable
+from sqlalchemy.util import IdentitySet
 
+import attrs
+import cattrs
 import geojson
 from geoalchemy2.shape import to_shape
 
 from tourist.models import render
 from tourist.models import sqlalchemy
+
+
+@enum.unique
+class RenderName(enum.Enum):
+    PLACE_PREFIX = "/place/"
+    PLACE_NAMES_WORLD = "/place_names_world"
+    CSV_ALL = "/csv"
+    POOLS_GEOJSON = "/pools.geojson"
 
 
 def build_render_club(orm_club: sqlalchemy.Club) -> render.Club:
@@ -88,3 +102,61 @@ def build_place_recursive_names(orm_place: sqlalchemy.Place) -> render.PlaceRecu
         child_pools=child_pools,
         child_places=child_places,
     )
+
+
+def yield_cache():
+    def get_all(cls):
+        all_objects = IdentitySet(cls.query.all()) | sqlalchemy.db.session.dirty | sqlalchemy.db.session.new
+        all_objects -= sqlalchemy.db.session.deleted
+        return list(filter(lambda obj: isinstance(obj, cls), all_objects))
+
+    all_places = get_all(sqlalchemy.Place)
+    all_clubs = get_all(sqlalchemy.Club)
+    all_pools = get_all(sqlalchemy.Pool)
+
+    for place in all_places:
+        render_place = build_render_place(place)
+        yield sqlalchemy.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
+                                     value_dict=attrs.asdict(render_place))
+        if place.short_name == 'world':
+            render_names_world = build_place_recursive_names(place)
+            yield sqlalchemy.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
+                                         value_dict=attrs.asdict(
+                                             render_names_world))
+
+    children_geojson = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
+    yield sqlalchemy.RenderCache(name=RenderName.POOLS_GEOJSON.value,
+                                 value_str=geojson.dumps(geojson.FeatureCollection(
+                                     children_geojson)))
+
+    si = io.StringIO()
+    cw = csv.DictWriter(si, extrasaction='ignore',
+                        fieldnames=['type', 'id', 'short_name', 'name', 'parent_short_name',
+                                    'markdown', 'status_date', 'status_comment'])
+    cw.writeheader()
+    for place in all_places:
+        cw.writerow(attrs.asdict(place.as_attrib_entity()))
+    for club in all_clubs:
+        if not club.parent:
+            print("odd")
+            pass
+        cw.writerow(attrs.asdict(club.as_attrib_entity()))
+    for pool in all_pools:
+        cw.writerow(attrs.asdict(pool.as_attrib_entity()))
+    yield sqlalchemy.RenderCache(name=RenderName.CSV_ALL.value, value_str=si.getvalue())
+
+
+def get_place(short_name: str) -> render.Place:
+    place_dict = sqlalchemy.RenderCache.query.get_or_404(
+        RenderName.PLACE_PREFIX.value + short_name).value_dict
+    return cattrs.structure(place_dict, render.Place)
+
+
+def get_place_names_world() -> render.PlaceRecursiveNames:
+    names_dict = sqlalchemy.RenderCache.query.get(RenderName.PLACE_NAMES_WORLD.value).value_dict
+    return cattrs.structure(names_dict, render.PlaceRecursiveNames)
+
+
+def get_string(name: RenderName) -> str:
+    return sqlalchemy.RenderCache.query.get(name.value).value_str
+
