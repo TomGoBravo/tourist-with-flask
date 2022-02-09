@@ -58,11 +58,11 @@ def test_heavy(test_app):
             'rydenewsouthwales',
             'newcastlenewsouthwales',
             'wollongongnewsouthwales'}
-        assert {c.short_name for c in au.descendant_pools} == {'theforumaquaticscentrene',
+        assert {c.short_name for c in au._descendant_pools} == {'theforumaquaticscentrene',
                                                                'rydeaquaticcentrevictori',
                                                                'wollongonguniversityaqua',
                                                                'wollongonguniversityaqua2',
-                                                               }
+                                                                }
 
         world = sqlalchemy.Place.query.filter_by(short_name='world').first()
         assert len(world.descendant_places) == 5

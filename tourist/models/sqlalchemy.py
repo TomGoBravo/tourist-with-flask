@@ -82,6 +82,8 @@ class Place(db.Model):
     status_date = db.Column(db.String, nullable=True)
     geonames_id = db.Column(db.Integer, nullable=True)
 
+    precomputed = db.relationship('PlacePrecomputed', backref='place', uselist=False)
+
     __versioned__ = {}
 
     def __str__(self):
@@ -144,17 +146,8 @@ class Place(db.Model):
         return self.child_places + list(chain.from_iterable(c.descendant_places for c in self.child_places))
 
     @property
-    def descendant_pools(self):
-        # TODO: Optimize for world to show all pools
+    def _descendant_pools(self):
         return self.child_pools + list(chain.from_iterable(p.child_pools for p in self.descendant_places))
-
-    @property
-    def geojson_children_collection(self):
-        children_geojson = [p.entrance_geojson_feature for p in self.descendant_pools if p.entrance_geojson_feature]
-        if children_geojson:
-            return geojson.FeatureCollection(children_geojson)
-        else:
-            return {}
 
     def as_attrib_entity(self):
         parent_short_name = self.parent and self.parent.short_name or ''
@@ -174,6 +167,21 @@ def place_as_attrib_entity(place, parent_short_name: str):
         status_comment=place.status_comment,
         status_date=place.status_date or None,
     )
+
+
+class PlacePrecomputed(db.Model):
+    id = db.Column(db.Integer, db.ForeignKey(Place.id), primary_key=True)
+
+    @property
+    def geojson_children_collection(self):
+        children_geojson = [p.entrance_geojson_feature for p in self.place._descendant_pools if
+                            p.entrance_geojson_feature]
+        if children_geojson:
+            return geojson.FeatureCollection(children_geojson)
+        else:
+            return {}
+
+
 
 
 class User(db.Model, UserMixin):
