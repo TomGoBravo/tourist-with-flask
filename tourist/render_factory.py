@@ -32,7 +32,8 @@ def build_render_club(orm_club: sqlalchemy.Club) -> render.Club:
 
 
 def build_render_pool(orm_pool: sqlalchemy.Pool) -> render.Pool:
-    club_back_links = [render.ClubShortNameName(c.short_name, c.name) for c in orm_pool.club_back_links]
+    club_back_links = [render.ClubShortNameName(short_name=c.short_name, name=c.name)
+                       for c in orm_pool.club_back_links]
 
     return render.Pool(
         id=orm_pool.id,

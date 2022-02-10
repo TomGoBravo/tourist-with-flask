@@ -240,7 +240,10 @@ def test_club_without_status_date(test_app):
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
         assert response.status_code == 200
+        # Check club markdown
         assert 'Foo Club plays' in response.get_data(as_text=True)
+        # Check link from pool back to club
+        assert 'Foo Club</a> practices here' in response.get_data(as_text=True)
 
 
 def test_list(test_app):
