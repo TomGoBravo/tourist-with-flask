@@ -15,6 +15,7 @@ import sqlalchemy_continuum
 from flask.cli import AppGroup
 from more_itertools import last
 
+from tourist import render_factory
 from tourist.models import attrib
 from tourist.models import sqlalchemy
 from tourist.models.sqlalchemy import PAGE_LINK_RE
@@ -106,6 +107,12 @@ def validate():
 
     for pool in sqlalchemy.Pool.query.all():
         pool.validate()
+
+
+@batchtool_cli.command('render-cache')
+def render_cache():
+    with sqlalchemy.db.session.begin():
+        sqlalchemy.db.session.add_all(render_factory.yield_cache())
 
 
 @batchtool_cli.command('transactionshift')

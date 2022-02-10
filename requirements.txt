@@ -55,7 +55,7 @@ flask-wtf==1.0.0
     # via -r requirements.in
 freezegun==1.1.0
     # via -r requirements.in
-geoalchemy2==0.10.1
+geoalchemy2==0.10.2
     # via -r requirements.in
 geojson==2.4.1
     # via -r requirements.in

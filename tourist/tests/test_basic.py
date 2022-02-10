@@ -5,6 +5,7 @@ from geoalchemy2 import WKTElement
 from pytest import approx
 
 import tourist.models.render
+from tourist import render_factory
 from tourist.scripts.sync import StaticSyncer
 from tourist.tests.conftest import no_expire_on_commit
 from tourist.tests.conftest import path_relative
@@ -166,17 +167,18 @@ def test_validate_club():
 
 
 def test_club_status_state():
-    c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
-                        status_date='2021-01-15')
+    c = tourist.models.render.Club(
+        id=1, name='Foo', short_name='shortie', markdown='[[ou]]', status_date='2021-01-15',
+    )
     with freeze_time("2022-01-15"):
         assert c.club_state == tourist.models.render.ClubState.CURRENT
     with freeze_time("2022-01-16"):
         assert c.club_state == tourist.models.render.ClubState.STALE
 
-    c = sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]',
-                        status_date='')
+    c = tourist.models.render.Club(
+        id=1, name='Foo', short_name='shortie', markdown='[[ou]]', status_date='',
+    )
     assert c.club_state == tourist.models.render.ClubState.STALE
-    c.validate()
 
 
 def add_some_entities(test_app):

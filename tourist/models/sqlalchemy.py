@@ -93,8 +93,8 @@ class Place(db.Model):
 
     def validate(self):
         _validate_short_name(self.short_name)
-        if self.parent_id is None and self.short_name != 'world':
-            raise ValueError("parent_id unset. Every place must have a parent.")
+        if self.parent_id is None and self.parent is None and self.short_name != 'world':
+            raise ValueError("parent unset. Every place must have a parent.")
         if self.markdown and re.search(WIKI_LINK_RE, self.markdown) is not None:
             raise ValueError("Place markdown must not contain [[Wiki Links]]")
 
@@ -230,8 +230,10 @@ class Club(db.Model):
 
     def validate(self):
         _validate_short_name(self.short_name)
-        if self.parent_id is None:
-            raise ValueError("parent_id unset. Every Club must have a parent Place.")
+        # When a validating new instances that weren't read from the database the parent may
+        # not yet have an id. This happens when it was created with `Club(parent=place)`.
+        if self.parent_id is None and self.parent is None:
+            raise ValueError("parent unset. Every Club must have a parent Place.")
         # TODO(TomGoBravo): Require status_date be always set
         if self.status_date:
             try:
@@ -276,8 +278,10 @@ class Pool(db.Model):
 
     def validate(self):
         _validate_short_name(self.short_name)
-        if self.parent_id is None:
-            raise ValueError("parent_id unset. Every Pool must have a parent Place.")
+        # When a validating new instances that weren't read from the database the parent may
+        # not yet have an id. This happens when it was created with `Club(parent=place)`.
+        if self.parent_id is None and self.parent is None:
+            raise ValueError("parent unset. Every Pool must have a parent Place.")
         if self.markdown and re.search(WIKI_LINK_RE, self.markdown) is not None:
             raise ValueError("Pool markdown must not contain [[Wiki Links]]")
 
@@ -287,7 +291,7 @@ class Pool(db.Model):
         clubs = []
         link_text = f'[[{self.short_name}]]'
         for club in self.parent.child_clubs:
-            if link_text in club.markdown:
+            if club.markdown and link_text in club.markdown:
                 clubs.append(club)
         return clubs
 

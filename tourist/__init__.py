@@ -22,6 +22,8 @@ from flask_login import current_user
 
 from tourist.wikilinks import WikiLinkExtension
 
+AFTER_FLUSH_TO_EXPIRE = 'update_render_after_flush_to_expire'
+
 
 def page_not_found(e):
     return flask.render_template('404.html'), 404
@@ -128,25 +130,40 @@ def create_app(default_config_object=config['dev']):
 
     @event.listens_for(db.session, "before_flush")
     def before_flush(session, flush_context, instances):
-        for instance in session.dirty:
+        update_render_after_flush_to_expire = []
+        update_render_after_flush = False
+        for instance in session.new | session.dirty:
             if not session.is_modified(instance):
                 continue
             if not hasattr(instance, 'as_attrib_entity'):
                 continue
             instance.validate()
-            entity = instance.as_attrib_entity()
-            app.logger.info(f'Change by {current_user}: {entity.dump_as_jsons()}')
+            update_render_after_flush_to_expire.append(instance)
+            update_render_after_flush = True
 
-        for instance in session.new | session.dirty | session.deleted:
+        for instance in session.deleted:
             if hasattr(instance, 'as_attrib_entity'):
-                session.info['update_render_after_flush'] = True
-                break
+                continue
+            update_render_after_flush = True
+
+        if update_render_after_flush:
+            session.info[AFTER_FLUSH_TO_EXPIRE] = update_render_after_flush_to_expire
 
     @event.listens_for(db.session, "after_flush_postexec")
     def after_flush_postexec(session, flush_context):
-        if session.info.get('update_render_after_flush', False):
+        # AFTER_FLUSH_TO_EXPIRE may be an empty list if there are only deletes so check if it is
+        # in session.info.
+        if AFTER_FLUSH_TO_EXPIRE in session.info:
+            # ORM model objects that haven't been loaded from the database are slightly different
+            # from those populated from a form. In particular `region` is a str instead of
+            # geometry type. Instead of changing the render_factory to handle both types force
+            # objects used for the render to be refreshed from the database.
+            # expire_all() breaks something deep in login code so instead expire just modified
+            # and added data used by render_factory. Yuck.
+            for instance in session.info[AFTER_FLUSH_TO_EXPIRE]:
+                session.expire(instance)
             session.add_all(render_factory.yield_cache())
-            del session.info['update_render_after_flush']
+            del session.info[AFTER_FLUSH_TO_EXPIRE]
 
     return app
 
