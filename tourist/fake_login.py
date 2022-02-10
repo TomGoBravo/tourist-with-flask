@@ -2,7 +2,7 @@ import attr
 import flask
 from flask import flash, render_template, Blueprint
 from flask_login import LoginManager, login_required, login_user, logout_user
-from .models import sqlalchemy
+from tourist.models import sqlalchemy
 
 
 # Replace the github blueprint of the normal login.

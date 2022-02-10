@@ -23,7 +23,7 @@ from sqlalchemy_continuum import make_versioned
 from sqlalchemy_continuum.plugins import FlaskPlugin
 
 from tourist.models import attrib
-from tourist.models.render import ClubState
+
 
 db = SQLAlchemy()
 # FLASK_APP=tourist flask db migrate
@@ -31,8 +31,8 @@ db = SQLAlchemy()
 # (sqlite3.OperationalError) no such module: VirtualElementary [SQL: 'PRAGMA table_info("ElementaryGeometries")
 #migrate = Migrate(db=db)
 
-# make_versioned kills sync performance, from 2 seconds to 51 seconds for 900 items.
-# I'll make do without online versions and depend on the Entity dump for a backup.
+# make_versioned kills sync performance, from 2 seconds to 51 seconds for 900 items but having an
+# online log of changes is nice.
 make_versioned(plugins=[FlaskPlugin()])
 
 

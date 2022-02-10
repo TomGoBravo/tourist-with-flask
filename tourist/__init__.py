@@ -69,7 +69,7 @@ def create_app(default_config_object=config['dev']):
     flask_md = Markdown(app)
     flask_md.register_extension(WikiLinkExtension, {})
 
-    from .models.sqlalchemy import db
+    from tourist.models.sqlalchemy import db
     db.init_app(app)
 
     #migrate.init_app(app)

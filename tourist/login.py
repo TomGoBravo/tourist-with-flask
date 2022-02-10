@@ -1,3 +1,4 @@
+import flask
 from flask_dance.consumer.storage.sqla import SQLAlchemyStorage
 from flask_dance.contrib.github import make_github_blueprint
 from flask_login import (
@@ -5,9 +6,7 @@ from flask_login import (
     login_required, login_user, logout_user)
 from sqlalchemy.orm.exc import NoResultFound
 from flask_dance.consumer import oauth_authorized, oauth_error
-from flask import flash, redirect
-from .models.sqlalchemy import OAuth, db
-import models.sqlalchemy
+from .models.sqlalchemy import OAuth, db, AnonymousUser, User
 
 github_blueprint = make_github_blueprint()
 # url_prefix="/login" is set when registering this blueprint
@@ -15,12 +14,12 @@ github_blueprint = make_github_blueprint()
 # setup login manager
 login_manager = LoginManager()
 login_manager.login_view = 'github.login'
-login_manager.anonymous_user = models.sqlalchemy.AnonymousUser
+login_manager.anonymous_user = AnonymousUser
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    u = models.sqlalchemy.User.query.get(int(user_id))
+    u = User.query.get(int(user_id))
     return u
 
 
@@ -32,13 +31,13 @@ github_blueprint.backend = SQLAlchemyStorage(OAuth, db.session, user=current_use
 @oauth_authorized.connect_via(github_blueprint)
 def github_logged_in(github_blueprint, token):
     if not token:
-        flash("Failed to log in with GitHub.", category="error")
+        flask.flash("Failed to log in with GitHub.", category="error")
         return False
 
     resp = github_blueprint.session.get("/user")
     if not resp.ok:
         msg = "Failed to fetch user info from GitHub."
-        flash(msg, category="error")
+        flask.flash(msg, category="error")
         return False
 
     github_info = resp.json()
@@ -62,7 +61,7 @@ def github_logged_in(github_blueprint, token):
 
     if oauth.user:
         login_user(oauth.user)
-        flash("Successfully signed in with GitHub.")
+        flask.flash("Successfully signed in with GitHub.")
 
     else:
         # Create a new local user account for this user
@@ -79,7 +78,7 @@ def github_logged_in(github_blueprint, token):
         db.session.commit()
         # Log in the new local user account
         login_user(user)
-        flash("Successfully signed in with GitHub.")
+        flask.flash("Successfully signed in with GitHub.")
 
     # Disable Flask-Dance's default behavior for saving the OAuth token
     return False
@@ -97,12 +96,12 @@ def github_error(github_blueprint, error, error_description=None, error_uri=None
         description=error_description,
         uri=error_uri,
     )
-    flash(msg, category="error")
+    flask.flash(msg, category="error")
 
 
 @github_blueprint.route("/logout")
 @login_required
 def logout():
     logout_user()
-    flash("You have logged out")
-    return redirect("/")
+    flask.flash("You have logged out")
+    return flask.redirect("/")
