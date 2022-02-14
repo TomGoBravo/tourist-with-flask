@@ -13,7 +13,7 @@ import flask
 from markdown import Extension
 from markdown.inlinepatterns import InlineProcessor
 
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 from markdown.util import etree
 
 
@@ -39,7 +39,7 @@ class WikiLinksInlineProcessor(InlineProcessor):
     def handleMatch(self, m, data):
         label = m.group(1).strip()
         if label:
-            pool = sqlalchemy.Pool.query.filter_by(short_name=label).one_or_none()
+            pool = tstore.Pool.query.filter_by(short_name=label).one_or_none()
             if pool:
                 a = etree.Element('a')
                 a.text = pool.name

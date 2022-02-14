@@ -6,7 +6,7 @@ from flask_login import current_user
 from wtforms import fields, widgets
 
 import tourist
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 import flask_pagedown.widgets
 import flask_pagedown.fields
 
@@ -39,7 +39,7 @@ class TouristAdminBaseModelView(geoa.ModelView):
         form = super(TouristAdminBaseModelView, self).create_form()
         parent_short_name = request.args.get('parent')
         if parent_short_name:
-            parent_obj = sqlalchemy.Place.query.filter_by(short_name=parent_short_name).one()
+            parent_obj = tstore.Place.query.filter_by(short_name=parent_short_name).one()
             form.parent.data = parent_obj
         return form
 
@@ -57,6 +57,6 @@ class PoolAdminModelView(TouristAdminBaseModelView):
 
 
 admin_views = flask_admin.Admin(base_template='my_master.html', template_mode="bootstrap4")
-admin_views.add_view(PlaceAdminModelView(sqlalchemy.Place, sqlalchemy.db.session, name='Place', endpoint='place'))
-admin_views.add_view(ClubAdminModelView(sqlalchemy.Club, sqlalchemy.db.session, name='Club', endpoint='club'))
-admin_views.add_view(PoolAdminModelView(sqlalchemy.Pool, sqlalchemy.db.session, name='Pool', endpoint='pool'))
+admin_views.add_view(PlaceAdminModelView(tstore.Place, tstore.db.session, name='Place', endpoint='place'))
+admin_views.add_view(ClubAdminModelView(tstore.Club, tstore.db.session, name='Club', endpoint='club'))
+admin_views.add_view(PoolAdminModelView(tstore.Pool, tstore.db.session, name='Pool', endpoint='pool'))

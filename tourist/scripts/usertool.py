@@ -3,7 +3,7 @@ from shapely.geometry import asShape
 from geoalchemy2.shape import from_shape, to_shape
 from flask.cli import AppGroup
 import click
-from tourist.models import sqlalchemy, attrib
+from tourist.models import tstore, attrib
 from shapely.geometry import mapping as shapely_mapping
 from geoalchemy2.shape import to_shape
 import attr

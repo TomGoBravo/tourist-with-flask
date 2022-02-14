@@ -10,7 +10,7 @@ import geojson
 from geoalchemy2.shape import to_shape
 
 from tourist.models import render
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 
 
 @enum.unique
@@ -21,7 +21,7 @@ class RenderName(enum.Enum):
     POOLS_GEOJSON = "/pools.geojson"
 
 
-def build_render_club(orm_club: sqlalchemy.Club) -> render.Club:
+def build_render_club(orm_club: tstore.Club) -> render.Club:
     return render.Club(
         id=orm_club.id,
         name=orm_club.name,
@@ -31,7 +31,7 @@ def build_render_club(orm_club: sqlalchemy.Club) -> render.Club:
     )
 
 
-def build_render_pool(orm_pool: sqlalchemy.Pool) -> render.Pool:
+def build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
     club_back_links = [render.ClubShortNameName(short_name=c.short_name, name=c.name)
                        for c in orm_pool.club_back_links]
 
@@ -45,7 +45,7 @@ def build_render_pool(orm_pool: sqlalchemy.Pool) -> render.Pool:
     )
 
 
-def build_render_place(orm_place: sqlalchemy.Place) -> render.Place:
+def build_render_place(orm_place: tstore.Place) -> render.Place:
 
     children_geojson = [p.entrance_geojson_feature for p in orm_place._descendant_pools if
                         p.entrance_geojson_feature]
@@ -90,7 +90,7 @@ def build_render_place(orm_place: sqlalchemy.Place) -> render.Place:
     )
 
 
-def build_place_recursive_names(orm_place: sqlalchemy.Place) -> render.PlaceRecursiveNames:
+def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiveNames:
     child_places = [build_place_recursive_names(p) for p in orm_place.child_places]
     child_clubs = [render.PlaceRecursiveNames.Club(c.name) for c in orm_place.child_clubs]
     child_pools = [render.PlaceRecursiveNames.Pool(p.name) for p in orm_place.child_pools]
@@ -107,26 +107,26 @@ def build_place_recursive_names(orm_place: sqlalchemy.Place) -> render.PlaceRecu
 
 def yield_cache():
     def get_all(cls):
-        all_objects = IdentitySet(cls.query.all()) | sqlalchemy.db.session.dirty | sqlalchemy.db.session.new
-        all_objects -= sqlalchemy.db.session.deleted
+        all_objects = IdentitySet(cls.query.all()) | tstore.db.session.dirty | tstore.db.session.new
+        all_objects -= tstore.db.session.deleted
         return list(filter(lambda obj: isinstance(obj, cls), all_objects))
 
-    all_places = get_all(sqlalchemy.Place)
-    all_clubs = get_all(sqlalchemy.Club)
-    all_pools = get_all(sqlalchemy.Pool)
+    all_places = get_all(tstore.Place)
+    all_clubs = get_all(tstore.Club)
+    all_pools = get_all(tstore.Pool)
 
     for place in all_places:
         render_place = build_render_place(place)
-        yield sqlalchemy.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
+        yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
                                      value_dict=attrs.asdict(render_place))
         if place.short_name == 'world':
             render_names_world = build_place_recursive_names(place)
-            yield sqlalchemy.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
+            yield tstore.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
                                          value_dict=attrs.asdict(
                                              render_names_world))
 
     children_geojson = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
-    yield sqlalchemy.RenderCache(name=RenderName.POOLS_GEOJSON.value,
+    yield tstore.RenderCache(name=RenderName.POOLS_GEOJSON.value,
                                  value_str=geojson.dumps(geojson.FeatureCollection(
                                      children_geojson)))
 
@@ -144,20 +144,20 @@ def yield_cache():
         cw.writerow(attrs.asdict(club.as_attrib_entity()))
     for pool in all_pools:
         cw.writerow(attrs.asdict(pool.as_attrib_entity()))
-    yield sqlalchemy.RenderCache(name=RenderName.CSV_ALL.value, value_str=si.getvalue())
+    yield tstore.RenderCache(name=RenderName.CSV_ALL.value, value_str=si.getvalue())
 
 
 def get_place(short_name: str) -> render.Place:
-    place_dict = sqlalchemy.RenderCache.query.get_or_404(
+    place_dict = tstore.RenderCache.query.get_or_404(
         RenderName.PLACE_PREFIX.value + short_name).value_dict
     return cattrs.structure(place_dict, render.Place)
 
 
 def get_place_names_world() -> render.PlaceRecursiveNames:
-    names_dict = sqlalchemy.RenderCache.query.get(RenderName.PLACE_NAMES_WORLD.value).value_dict
+    names_dict = tstore.RenderCache.query.get(RenderName.PLACE_NAMES_WORLD.value).value_dict
     return cattrs.structure(names_dict, render.PlaceRecursiveNames)
 
 
 def get_string(name: RenderName) -> str:
-    return sqlalchemy.RenderCache.query.get(name.value).value_str
+    return tstore.RenderCache.query.get(name.value).value_str
 

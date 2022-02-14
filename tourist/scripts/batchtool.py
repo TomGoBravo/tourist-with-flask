@@ -17,9 +17,9 @@ from more_itertools import last
 
 from tourist import render_factory
 from tourist.models import attrib
-from tourist.models import sqlalchemy
-from tourist.models.sqlalchemy import PAGE_LINK_RE
-from tourist.models.sqlalchemy import optional_geometry_to_shape
+from tourist.models import tstore
+from tourist.models.tstore import PAGE_LINK_RE
+from tourist.models.tstore import optional_geometry_to_shape
 from tourist.scripts import sync
 
 batchtool_cli = AppGroup('batchtool')
@@ -27,7 +27,7 @@ batchtool_cli = AppGroup('batchtool')
 
 @attr.s(auto_attribs=True, slots=True)
 class ClubPoolLink:
-    club: sqlalchemy.Club
+    club: tstore.Club
     target_short_name: str
     title: Optional[str]
 
@@ -38,14 +38,14 @@ class ClubPoolLink:
 @batchtool_cli.command('club-pool-links')
 def club_pool_links():
     links = []
-    for club in sqlalchemy.Club.query.all():
+    for club in tstore.Club.query.all():
         for link_title, link_target in re.findall(PAGE_LINK_RE, club.markdown):
             links.append(ClubPoolLink(club, link_target, link_title))
         for link_target in re.findall(r'\[\[(\w+)]]', club.markdown):
             links.append(ClubPoolLink(club, link_target, None))
 
     pools = {}
-    for pool in sqlalchemy.Pool.query.all():
+    for pool in tstore.Pool.query.all():
         pools[pool.short_name] = pool
 
     good_links = []
@@ -80,11 +80,11 @@ def club_pool_links():
 def replace_club_pool_links(write):
     replacements = 0
     modified_clubs = []
-    for club in sqlalchemy.Club.query.all():
+    for club in tstore.Club.query.all():
         new_markdown, sub_count = re.subn(PAGE_LINK_RE, r'[[\2]]', club.markdown)
         if sub_count > 0:
             club.markdown = new_markdown
-            sqlalchemy.db.session.add(club)
+            tstore.db.session.add(club)
             modified_clubs.append(club.short_name)
         replacements += sub_count
 
@@ -92,27 +92,27 @@ def replace_club_pool_links(write):
 
     if write:
         click.echo('Committing changes')
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
     else:
         click.echo('Run with --write to commit changes')
 
 
 @batchtool_cli.command('validate')
 def validate():
-    for place in sqlalchemy.Place.query.all():
+    for place in tstore.Place.query.all():
         place.validate()
 
-    for club in sqlalchemy.Club.query.all():
+    for club in tstore.Club.query.all():
         club.validate()
 
-    for pool in sqlalchemy.Pool.query.all():
+    for pool in tstore.Pool.query.all():
         pool.validate()
 
 
 @batchtool_cli.command('render-cache')
 def render_cache():
-    with sqlalchemy.db.session.begin():
-        sqlalchemy.db.session.add_all(render_factory.yield_cache())
+    with tstore.db.session.begin():
+        tstore.db.session.add_all(render_factory.yield_cache())
 
 
 @batchtool_cli.command('transactionshift')
@@ -128,30 +128,30 @@ def transactionshift(write: bool):
         # Temporary offset suggested by https://stackoverflow.com/a/22500510/341400 to avoid
         # id collisions.
         temp_offset = 100_000
-        sqlalchemy.db.session.query(cls).update({
+        tstore.db.session.query(cls).update({
             column_name: getattr(cls, column_name) + temp_offset})
-        sqlalchemy.db.session.query(cls).update({
+        tstore.db.session.query(cls).update({
             column_name: getattr(cls, column_name) - temp_offset + shift_amount})
 
-    for model_cls in (sqlalchemy.Club, sqlalchemy.Pool, sqlalchemy.Place):
+    for model_cls in (tstore.Club, tstore.Pool, tstore.Place):
         version_cls = sqlalchemy_continuum.version_class(model_cls)
         incr_column(version_cls, 'transaction_id')
         incr_column(version_cls, 'end_transaction_id')
 
-    incr_column(sqlalchemy_continuum.transaction_class(sqlalchemy.Club), 'id')
+    incr_column(sqlalchemy_continuum.transaction_class(tstore.Club), 'id')
 
     if write:
         click.echo('Committing changes')
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
     else:
         click.echo('Run with --write to commit changes')
 
 
-PoolVersion = sqlalchemy_continuum.version_class(sqlalchemy.Pool)
-PlaceVersion = sqlalchemy_continuum.version_class(sqlalchemy.Place)
-ClubVersion = sqlalchemy_continuum.version_class(sqlalchemy.Club)
-Transaction = sqlalchemy_continuum.transaction_class(sqlalchemy.Club)
-operation_type_column_name = sqlalchemy_continuum.utils.option(sqlalchemy.Club,
+PoolVersion = sqlalchemy_continuum.version_class(tstore.Pool)
+PlaceVersion = sqlalchemy_continuum.version_class(tstore.Place)
+ClubVersion = sqlalchemy_continuum.version_class(tstore.Club)
+Transaction = sqlalchemy_continuum.transaction_class(tstore.Club)
+operation_type_column_name = sqlalchemy_continuum.utils.option(tstore.Club,
                                                          'operation_type_column_name')
 
 
@@ -286,13 +286,13 @@ class VersionSyncer:
         entities = []
         for version_obj in self.version_tables[PoolVersion].live_versions():
             parent_short_name = place_id_to_short_name[version_obj.parent_id]
-            entities.append(sqlalchemy.pool_as_attrib_entity(version_obj, parent_short_name))
+            entities.append(tstore.pool_as_attrib_entity(version_obj, parent_short_name))
         for version_obj in self.version_tables[ClubVersion].live_versions():
             parent_short_name = place_id_to_short_name[version_obj.parent_id]
-            entities.append(sqlalchemy.club_as_attrib_entity(version_obj, parent_short_name))
+            entities.append(tstore.club_as_attrib_entity(version_obj, parent_short_name))
         for version_obj in self.version_tables[PlaceVersion].live_versions():
             parent_short_name = place_id_to_short_name[version_obj.parent_id]
-            entities.append(sqlalchemy.place_as_attrib_entity(version_obj, parent_short_name))
+            entities.append(tstore.place_as_attrib_entity(version_obj, parent_short_name))
         return sync.sort_entities(entities)
 
 
@@ -385,6 +385,6 @@ def transactioninsert1(initial_snapshot: str, change_log: str, output_path: str,
 
     if commit:
         click.echo('Committing changes')
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
     else:
         click.echo('Run with --write to commit changes')

@@ -9,7 +9,7 @@ from tourist import render_factory
 from tourist.scripts.sync import StaticSyncer
 from tourist.tests.conftest import no_expire_on_commit
 from tourist.tests.conftest import path_relative
-from tourist.models import sqlalchemy, attrib
+from tourist.models import tstore, attrib
 from tourist.scripts import sync
 from shapely.geometry.geo import mapping
 import json
@@ -28,22 +28,22 @@ def test_heavy(test_app):
         importer = sync.Importer()
         importer.run(open(path_relative('testentities.jsonl')).readlines())
 
-        pools = sqlalchemy.Pool.query.all()
+        pools = tstore.Pool.query.all()
         assert {p.name for p in pools} == {
             'The Forum Aquatics Centre',
             'Ryde Aquatic Centre',
             'Wollongong University Aquatics Center',
             'Wollongong University Aquatics Center 2'}
 
-        pools = sqlalchemy.Pool.query.filter(
-            sqlalchemy.Pool.entrance.isnot(None)).filter(
-            sqlalchemy.Pool.entrance.ST_CoveredBy(
+        pools = tstore.Pool.query.filter(
+            tstore.Pool.entrance.isnot(None)).filter(
+            tstore.Pool.entrance.ST_CoveredBy(
                 WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,150.90 -34.42))'))).all()
         assert {p.name for p in pools} == {'Wollongong University Aquatics Center'}
 
-        place = sqlalchemy.Place.query.filter(
-            sqlalchemy.Place.region.isnot(None)).order_by(
-            sqlalchemy.Place.region.ST_Centroid().ST_Distance(WKTElement('POINT(150.88 -34.41)'))).first()
+        place = tstore.Place.query.filter(
+            tstore.Place.region.isnot(None)).order_by(
+            tstore.Place.region.ST_Centroid().ST_Distance(WKTElement('POINT(150.88 -34.41)'))).first()
         print(f'{repr(place.region)} ({type(place.region)})')
         assert 'Wollongong' == place.name
 
@@ -55,7 +55,7 @@ def test_heavy(test_app):
 
     # test descendant_places
     with test_app.app_context():
-        au = sqlalchemy.Place.query.filter_by(short_name='au').first()
+        au = tstore.Place.query.filter_by(short_name='au').first()
         assert {c.short_name for c in au.descendant_places} == {
             'newsouthwales',
             'rydenewsouthwales',
@@ -67,19 +67,19 @@ def test_heavy(test_app):
                                                                'wollongonguniversityaqua2',
                                                                 }
 
-        world = sqlalchemy.Place.query.filter_by(short_name='world').first()
+        world = tstore.Place.query.filter_by(short_name='world').first()
         assert len(world.descendant_places) == 5
 
     # Add a user
     with test_app.app_context():
-        user = sqlalchemy.User(id=1, username='usernamefoo', email='testuser@domain.com', edit_granted=True)
+        user = tstore.User(id=1, username='usernamefoo', email='testuser@domain.com', edit_granted=True)
 
         with no_expire_on_commit():
-            sqlalchemy.db.session.add(user)
-            sqlalchemy.db.session.commit()
+            tstore.db.session.add(user)
+            tstore.db.session.commit()
 
-        newsouthwales = sqlalchemy.Place.query.filter_by(short_name='newsouthwales').first()
-        starfish = sqlalchemy.Club.query.filter_by(short_name='sydneystarfish').first()
+        newsouthwales = tstore.Place.query.filter_by(short_name='newsouthwales').first()
+        starfish = tstore.Club.query.filter_by(short_name='sydneystarfish').first()
 
     with test_app.test_client() as c:
         response = c.get('/tourist/')
@@ -120,12 +120,12 @@ def test_heavy(test_app):
         assert 'Provide at least ' in response.get_data(as_text=True)
 
     with test_app.app_context():
-        newnewsouthwales = sqlalchemy.Place.query.filter_by(short_name='newsouthwales').first()
+        newnewsouthwales = tstore.Place.query.filter_by(short_name='newsouthwales').first()
         assert newnewsouthwales.name == 'New South Wales Changed'
 
 
 def test_place_properties():
-    place = sqlalchemy.Place(
+    place = tstore.Place(
         name='Test Name',
         short_name='short_name_test',
         region=WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,150.90 -34.42))')
@@ -133,7 +133,7 @@ def test_place_properties():
     assert place.area == approx(0.0012)
     assert place.area_text_scale == '\u25cf\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb'
 
-    place = sqlalchemy.Place(
+    place = tstore.Place(
         name='Test Name',
         short_name='short_name_test',
         region=WKTElement('POLYGON(EMPTY)')
@@ -144,26 +144,26 @@ def test_place_properties():
 
 def test_validate_place():
     with pytest.raises(ValueError, match='short_name'):
-        sqlalchemy.Place(name='Foo', short_name=' bad_name').validate()
+        tstore.Place(name='Foo', short_name=' bad_name').validate()
 
     with pytest.raises(ValueError, match='parent'):
-        sqlalchemy.Place(name='Foo', short_name='shortie').validate()
+        tstore.Place(name='Foo', short_name='shortie').validate()
 
     with pytest.raises(ValueError, match='Wiki'):
-        sqlalchemy.Place(name='Foo', short_name='shortie', parent_id=2,
+        tstore.Place(name='Foo', short_name='shortie', parent_id=2,
                          markdown='[[link]]').validate()
 
-    sqlalchemy.Place(name='Foo', short_name='shortie', parent_id=2).validate()
+    tstore.Place(name='Foo', short_name='shortie', parent_id=2).validate()
 
 
 def test_validate_club():
     with pytest.raises(ValueError, match='short_name'):
-        sqlalchemy.Club(name='Foo', short_name=' bad_name').validate()
+        tstore.Club(name='Foo', short_name=' bad_name').validate()
 
     with pytest.raises(ValueError, match='parent'):
-        sqlalchemy.Club(name='Foo', short_name='shortie').validate()
+        tstore.Club(name='Foo', short_name='shortie').validate()
 
-    sqlalchemy.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]').validate()
+    tstore.Club(name='Foo', short_name='shortie', parent_id=2, markdown='[[ou]]').validate()
 
 
 def test_club_status_state():
@@ -183,7 +183,7 @@ def test_club_status_state():
 
 def add_some_entities(test_app):
     with test_app.app_context():
-        world = sqlalchemy.Place(
+        world = tstore.Place(
             name='World',
             short_name='world',
             region=WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
@@ -191,7 +191,7 @@ def add_some_entities(test_app):
             id=1,
             markdown='',
         )
-        country = sqlalchemy.Place(
+        country = tstore.Place(
             name='Country Name',
             short_name='cc',
             parent_id=1,
@@ -201,7 +201,7 @@ def add_some_entities(test_app):
             id=2,
             markdown='',
         )
-        metro = sqlalchemy.Place(
+        metro = tstore.Place(
             name='Metro Name',
             short_name='metro',
             parent_id=2,
@@ -211,23 +211,23 @@ def add_some_entities(test_app):
             id=3,
             markdown='',
         )
-        club = sqlalchemy.Club(name='Foo Club', short_name='shortie', parent_id=3,
+        club = tstore.Club(name='Foo Club', short_name='shortie', parent_id=3,
                                markdown='Foo Club plays at [[poolish]].',
                                id=1,
                                status_date='')
-        pool = sqlalchemy.Pool(name='Metro Pool', short_name='poolish', parent_id=3,
+        pool = tstore.Pool(name='Metro Pool', short_name='poolish', parent_id=3,
                                markdown='Some palace', id=1)
-        sqlalchemy.db.session.add_all([world, country, metro, club, pool])
-        sqlalchemy.db.session.commit()
+        tstore.db.session.add_all([world, country, metro, club, pool])
+        tstore.db.session.commit()
 
 
 def add_and_return_edit_granted_user(test_app):
     with test_app.app_context():
-        user_edit_granted = sqlalchemy.User(id=1, username='blah', email='testuser2@domain.com',
+        user_edit_granted = tstore.User(id=1, username='blah', email='testuser2@domain.com',
                                             edit_granted=True)
         with no_expire_on_commit():
-            sqlalchemy.db.session.add_all([user_edit_granted])
-            sqlalchemy.db.session.commit()
+            tstore.db.session.add_all([user_edit_granted])
+            tstore.db.session.commit()
         return user_edit_granted
 
 
@@ -235,7 +235,7 @@ def test_club_without_status_date(test_app):
     add_some_entities(test_app)
 
     with test_app.app_context():
-        assert not sqlalchemy.Club.query.filter_by(short_name='shortie').one().status_date
+        assert not tstore.Club.query.filter_by(short_name='shortie').one().status_date
 
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
@@ -262,10 +262,10 @@ def test_club_with_bad_pool_link(test_app):
     add_some_entities(test_app)
 
     with test_app.app_context():
-        club = sqlalchemy.Club.query.filter_by(short_name='shortie').one()
+        club = tstore.Club.query.filter_by(short_name='shortie').one()
         club.markdown += " * [[badpoollink]]\n"
-        sqlalchemy.db.session.add(club)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.add(club)
+        tstore.db.session.commit()
 
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
@@ -292,7 +292,7 @@ def test_delete_club(test_app):
 
     # Check that delete didn't happen
     with test_app.app_context():
-        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 1
+        assert tstore.Club.query.filter_by(short_name='shortie').count() == 1
 
     with test_app.test_client(user=user) as c:
         response = c.post(f'/tourist/delete/club/1', data=dict(confirm=True,
@@ -301,7 +301,7 @@ def test_delete_club(test_app):
         assert response.location.endswith('/tourist/place/metro')
 
     with test_app.app_context():
-        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
+        assert tstore.Club.query.filter_by(short_name='shortie').count() == 0
 
 
 def test_delete_place(test_app):
@@ -328,7 +328,7 @@ def test_delete_place(test_app):
 
     # Check that delete didn't happen because `confirm` was not set
     with test_app.app_context():
-        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 1
+        assert tstore.Club.query.filter_by(short_name='shortie').count() == 1
 
     with test_app.test_client(user=user) as c:
         response = c.post(f'/tourist/delete/place/3', data=dict(confirm=True,
@@ -337,7 +337,7 @@ def test_delete_place(test_app):
         assert response.location.endswith('/tourist/place/cc')
 
     with test_app.app_context():
-        assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
+        assert tstore.Club.query.filter_by(short_name='shortie').count() == 0
 
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
@@ -366,11 +366,11 @@ def test_delete_pool(test_app):
 
     # Check that delete didn't happen
     with test_app.app_context():
-        assert sqlalchemy.Pool.query.filter_by(short_name='poolish').count() == 1
-        club = sqlalchemy.Club.query.get(1)
+        assert tstore.Pool.query.filter_by(short_name='poolish').count() == 1
+        club = tstore.Club.query.get(1)
         club.markdown = 'Club Foo has no pool'
-        sqlalchemy.db.session.add(club)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.add(club)
+        tstore.db.session.commit()
 
     with test_app.test_client(user=user) as c:
         response = c.post(f'/tourist/delete/pool/1', data=dict(confirm=True,
@@ -379,17 +379,17 @@ def test_delete_pool(test_app):
         assert response.location.endswith('/tourist/place/metro')
 
     with test_app.app_context():
-        assert sqlalchemy.Pool.query.filter_by(short_name='poolish').count() == 0
+        assert tstore.Pool.query.filter_by(short_name='poolish').count() == 0
 
 
 def test_static_sync_no_override():
-    world = sqlalchemy.Place(
+    world = tstore.Place(
         name='World',
         short_name='world',
         region=WKTElement('POLYGON(EMPTY)'),
         id=1,
     )
-    place = sqlalchemy.Place(
+    place = tstore.Place(
         name='Test Name',
         short_name='short_name_test',
         parent_id=1,

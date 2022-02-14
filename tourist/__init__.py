@@ -13,9 +13,9 @@ import markdown
 import markdown.extensions.wikilinks
 from flask import current_app
 
-import tourist.models.sqlalchemy
+import tourist.models.tstore
 from tourist import render_factory
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 from sqlalchemy import event
 from tourist.config import config
 from flaskext.markdown import Markdown
@@ -70,7 +70,7 @@ def create_app(default_config_object=config['dev']):
     flask_md = Markdown(app)
     flask_md.register_extension(WikiLinkExtension, {})
 
-    from tourist.models.sqlalchemy import db
+    from tourist.models.tstore import db
     db.init_app(app)
 
     #migrate.init_app(app)
@@ -164,7 +164,7 @@ def create_app(default_config_object=config['dev']):
                 session.add(new_cache)
                 new_cache_ids.append(new_cache.name)
             # Remove rows in RenderCache not in new_cache_ids. This should be removed places.
-            session.query(sqlalchemy.RenderCache).filter(sqlalchemy.RenderCache.name.notin_(
+            session.query(tstore.RenderCache).filter(tstore.RenderCache.name.notin_(
                 new_cache_ids)).delete()
             del session.info[UPDATE_RENDER_AFTER_FLUSH]
 

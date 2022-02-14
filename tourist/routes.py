@@ -16,13 +16,13 @@ from wtforms.validators import DataRequired
 
 import tourist
 from tourist import render_factory
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 
 tourist_bp = Blueprint('tourist_bp', __name__)
 
 
 def mapbox_access_token():
-    return sqlalchemy.db.get_app().config['MAPBOX_ACCESS_TOKEN']
+    return tstore.db.get_app().config['MAPBOX_ACCESS_TOKEN']
 
 
 @tourist_bp.route("/")
@@ -71,12 +71,12 @@ def edit_club(club_id):
     if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
         return tourist.inaccessible_response()
 
-    club = sqlalchemy.Club.query.get_or_404(club_id)
+    club = tstore.Club.query.get_or_404(club_id)
     form = ClubForm(obj=club)
     if form.validate_on_submit():
         form.populate_obj(club)
         flask.flash(f"Updated {club.name}")
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
         return redirect(club.path)
     return render_template("edit_club.html", form=form, club=club)
 
@@ -84,7 +84,7 @@ def edit_club(club_id):
 class PlaceForm(FlaskForm):
     name = StringField('name', validators=[DataRequired()])
     markdown = TextAreaField('markdown')
-    region = GeoJSONField('region', srid=4326, session=sqlalchemy.db.session, geometry_type="POLYGON")
+    region = GeoJSONField('region', srid=4326, session=tstore.db.session, geometry_type="POLYGON")
     status_date = StringField('status_date', filters=[false_as_none])
     status_comment = StringField('status_comment', filters=[false_as_none])
 
@@ -94,12 +94,12 @@ def edit_place(place_id):
     if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
         return tourist.inaccessible_response()
 
-    place = sqlalchemy.Place.query.get_or_404(place_id)
+    place = tstore.Place.query.get_or_404(place_id)
     form = PlaceForm(obj=place)
     if form.validate_on_submit():
         form.populate_obj(place)
         flask.flash(f"Updated {place.name}")
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
         return redirect(place.path)
     return render_template("edit_place.html", form=form, place=place)
 
@@ -109,17 +109,17 @@ class DeleteItemForm(FlaskForm):
         wtforms.validators.DataRequired()])
 
 
-def delete_pool_and_flash(pool: sqlalchemy.Pool):
+def delete_pool_and_flash(pool: tstore.Pool):
     flask.flash(f"Deleting {pool.name}")
-    sqlalchemy.db.session.delete(pool)
+    tstore.db.session.delete(pool)
 
 
-def delete_club_and_flash(club: sqlalchemy.Club):
+def delete_club_and_flash(club: tstore.Club):
     flask.flash(f"Deleting {club.name}")
-    sqlalchemy.db.session.delete(club)
+    tstore.db.session.delete(club)
 
 
-def delete_place_children_and_flash(place: sqlalchemy.Place):
+def delete_place_children_and_flash(place: tstore.Place):
     if place.child_places:
         raise ValueError("Attempt to delete place with child_places")
     for pool in place.child_pools:
@@ -127,7 +127,7 @@ def delete_place_children_and_flash(place: sqlalchemy.Place):
     for club in place.child_clubs:
         delete_club_and_flash(club)
     flask.flash(f"Deleting {place.name}")
-    sqlalchemy.db.session.delete(place)
+    tstore.db.session.delete(place)
 
 
 @tourist_bp.route("/delete/place/<int:place_id>", methods=['GET', 'POST'])
@@ -135,14 +135,14 @@ def delete_place(place_id):
     if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
         return tourist.inaccessible_response()
 
-    place = sqlalchemy.Place.query.get_or_404(place_id)
+    place = tstore.Place.query.get_or_404(place_id)
 
     form = DeleteItemForm(data={'confirm': False})
 
     if form.validate_on_submit():
         parent_path = place.parent.path
         delete_place_children_and_flash(place)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
         return redirect(parent_path)
 
     return render_template('delete_place.html', form=form, place=place)
@@ -153,14 +153,14 @@ def delete_club(club_id):
     if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
         return tourist.inaccessible_response()
 
-    club = sqlalchemy.Club.query.get_or_404(club_id)
+    club = tstore.Club.query.get_or_404(club_id)
 
     form = DeleteItemForm(data={'confirm': False})
 
     if form.validate_on_submit():
         parent_path = club.parent.path
         delete_club_and_flash(club)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
         return redirect(parent_path)
 
     return render_template('delete_club.html', form=form, club=club)
@@ -171,7 +171,7 @@ def delete_pool(pool_id):
     if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
         return tourist.inaccessible_response()
 
-    pool = sqlalchemy.Pool.query.get_or_404(pool_id)
+    pool = tstore.Pool.query.get_or_404(pool_id)
 
     form = DeleteItemForm(data={'confirm': False})
 
@@ -180,20 +180,20 @@ def delete_pool(pool_id):
             raise ValueError("Attempt to delete pool when it has club_back_links")
         parent_path = pool.parent.path
         delete_pool_and_flash(pool)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.commit()
         return redirect(parent_path)
 
     return render_template('delete_pool.html', form=form, pool=pool)
 
 @tourist_bp.route("/page/<string:short_name>")
 def page_short_name(short_name):
-    pool = sqlalchemy.Pool.query.filter_by(short_name=short_name).one_or_none()
+    pool = tstore.Pool.query.filter_by(short_name=short_name).one_or_none()
     if pool:
         return redirect(pool.path)
-    club = sqlalchemy.Club.query.filter_by(short_name=short_name).one_or_none()
+    club = tstore.Club.query.filter_by(short_name=short_name).one_or_none()
     if club:
         return redirect(club.path)
-    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
+    place = tstore.Place.query.filter_by(short_name=short_name).one_or_none()
     if place:
         return redirect(place.path)
     flask.abort(404)
@@ -201,7 +201,7 @@ def page_short_name(short_name):
 
 @tourist_bp.route("/<string:short_name>.html")
 def old_place_html_file(short_name):
-    place = sqlalchemy.Place.query.filter_by(short_name=short_name).one_or_none()
+    place = tstore.Place.query.filter_by(short_name=short_name).one_or_none()
     if place is not None:
         return redirect(url_for('.place_short_name', short_name=place.short_name))
     # Default to trying to send a few old static files
@@ -218,10 +218,10 @@ def data_all_geojson():
     return render_factory.get_string(render_factory.RenderName.POOLS_GEOJSON)
 
 
-Transaction = transaction_class(sqlalchemy.Club)
-ClubVersion = sqlalchemy_continuum.version_class(sqlalchemy.Club)
-PlaceVersion = sqlalchemy_continuum.version_class(sqlalchemy.Place)
-PoolVersion = sqlalchemy_continuum.version_class(sqlalchemy.Pool)
+Transaction = transaction_class(tstore.Club)
+ClubVersion = sqlalchemy_continuum.version_class(tstore.Club)
+PlaceVersion = sqlalchemy_continuum.version_class(tstore.Place)
+PoolVersion = sqlalchemy_continuum.version_class(tstore.Pool)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -234,8 +234,8 @@ class TransactionLog:
 
 @tourist_bp.route("/transactionlog")
 def log():
-    manager = sqlalchemy.Club.__versioning_manager__
-    tx_column = manager.option(sqlalchemy.Club, 'transaction_column_name')
+    manager = tstore.Club.__versioning_manager__
+    tx_column = manager.option(tstore.Club, 'transaction_column_name')
     transaction_logs = collections.defaultdict(TransactionLog)
     for t in Transaction.query.all():
         transaction_logs[t.id] = TransactionLog(issued_at=t.issued_at)

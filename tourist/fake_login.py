@@ -2,7 +2,7 @@ import attr
 import flask
 from flask import flash, render_template, Blueprint
 from flask_login import LoginManager, login_required, login_user, logout_user
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 
 
 # Replace the github blueprint of the normal login.
@@ -11,18 +11,18 @@ fake_login_bp = Blueprint('github', __name__)
 
 login_manager = LoginManager()
 login_manager.login_view = 'github.login'
-login_manager.anonymous_user = sqlalchemy.AnonymousUser
+login_manager.anonymous_user = tstore.AnonymousUser
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    u = sqlalchemy.User.query.get(int(user_id))
+    u = tstore.User.query.get(int(user_id))
     return u
 
 
 @attr.s(auto_attribs=True)
 class UserParams:
-    """Parameters to create an sqlalchemy.User object."""
+    """Parameters to create an tstore.User object."""
     username: str
     name: str
     edit_granted: bool
@@ -35,13 +35,13 @@ userparams = [
 ]
 
 
-def get_user_by_username(username: str) -> sqlalchemy.User:
+def get_user_by_username(username: str) -> tstore.User:
     assert username in {u.username for u in userparams}
-    user = sqlalchemy.User.query.filter_by(username=username).one_or_none()
+    user = tstore.User.query.filter_by(username=username).one_or_none()
     if user is None:
-        user = sqlalchemy.User(**attr.asdict(next(u for u in userparams if u.username == username)))
-        sqlalchemy.db.session.add(user)
-        sqlalchemy.db.session.commit()
+        user = tstore.User(**attr.asdict(next(u for u in userparams if u.username == username)))
+        tstore.db.session.add(user)
+        tstore.db.session.commit()
     return user
 
 

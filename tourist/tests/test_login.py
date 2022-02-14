@@ -1,18 +1,18 @@
-from tourist.models import sqlalchemy
+from tourist.models import tstore
 from tourist.tests.conftest import no_expire_on_commit
 
 
 def test_heavy(test_app):
     with test_app.app_context():
-        world = sqlalchemy.Place(id=1, name='World', short_name='world', markdown='')
-        au = sqlalchemy.Place(id=2, name='Australia', short_name='au', parent_id=1, markdown='')
+        world = tstore.Place(id=1, name='World', short_name='world', markdown='')
+        au = tstore.Place(id=2, name='Australia', short_name='au', parent_id=1, markdown='')
 
-        user_plain = sqlalchemy.User(id=1, username='usernamefoo', email='testuser1@domain.com')
-        user_edit_granted = sqlalchemy.User(id=2, username='blah', email='testuser2@domain.com', edit_granted=True)
+        user_plain = tstore.User(id=1, username='usernamefoo', email='testuser1@domain.com')
+        user_edit_granted = tstore.User(id=2, username='blah', email='testuser2@domain.com', edit_granted=True)
 
         with no_expire_on_commit():
-            sqlalchemy.db.session.add_all([world, au, user_plain, user_edit_granted])
-            sqlalchemy.db.session.commit()
+            tstore.db.session.add_all([world, au, user_plain, user_edit_granted])
+            tstore.db.session.commit()
 
     with test_app.test_client() as c:
         response = c.get('/tourist/')
@@ -37,7 +37,7 @@ def test_heavy(test_app):
         response = c.get('/admin/place/edit/?id=3')
         assert response.status_code == 403
 
-        au = sqlalchemy.Place.query.filter_by(short_name='au').one()
+        au = tstore.Place.query.filter_by(short_name='au').one()
         response = c.post(f'/admin/place/edit/?id={au.id}', data=dict(
             parent=au.parent_id,
             name=au.name + ' Changed',
@@ -46,7 +46,7 @@ def test_heavy(test_app):
         assert response.status_code == 403
 
     with test_app.app_context():
-        new_au = sqlalchemy.Place.query.filter_by(short_name='au').first()
+        new_au = tstore.Place.query.filter_by(short_name='au').first()
         assert new_au.name == 'Australia'
 
     # Login. This user is authorized to /admin
@@ -69,5 +69,5 @@ def test_heavy(test_app):
         assert response.status_code == 302
 
     with test_app.app_context():
-        new_au = sqlalchemy.Place.query.filter_by(short_name='au').one()
+        new_au = tstore.Place.query.filter_by(short_name='au').one()
         assert new_au.name == 'Australia Changed'

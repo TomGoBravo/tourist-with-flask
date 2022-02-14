@@ -6,7 +6,7 @@ from flask_login import (
     login_required, login_user, logout_user)
 from sqlalchemy.orm.exc import NoResultFound
 from flask_dance.consumer import oauth_authorized, oauth_error
-from .models.sqlalchemy import OAuth, db, AnonymousUser, User
+from .models.tstore import OAuth, db, AnonymousUser, User
 
 github_blueprint = make_github_blueprint()
 # url_prefix="/login" is set when registering this blueprint

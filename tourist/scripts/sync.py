@@ -6,7 +6,7 @@ from shapely.geometry import asShape
 from geoalchemy2.shape import from_shape, to_shape
 from flask.cli import AppGroup
 import click
-from tourist.models import sqlalchemy, attrib
+from tourist.models import tstore, attrib
 from shapely.geometry import mapping as shapely_mapping
 from geoalchemy2.shape import to_shape
 import attr
@@ -23,28 +23,28 @@ class StaticSyncer:
 
     This class does not communicate with the database.
     """
-    short_name_to_place: Dict[str, sqlalchemy.Place] = attr.ib(factory=lambda: {'': None})
-    short_name_to_club: Dict[str, sqlalchemy.Club] = attr.ib(factory=dict)
-    short_name_to_pool: Dict[str, sqlalchemy.Pool] = attr.ib(factory=dict)
-    to_add: List[sqlalchemy.Place] = attr.ib(factory=list)
+    short_name_to_place: Dict[str, tstore.Place] = attr.ib(factory=lambda: {'': None})
+    short_name_to_club: Dict[str, tstore.Club] = attr.ib(factory=dict)
+    short_name_to_pool: Dict[str, tstore.Pool] = attr.ib(factory=dict)
+    to_add: List[tstore.Place] = attr.ib(factory=list)
     updated_fields: Set[str] = attr.ib(factory=set)
     skipped_type: Set[str] = attr.ib(factory=set)
     club_columns: Set[str] = attr.ib(factory=set)
 
-    def add_existing_place(self, place: sqlalchemy.Place):
+    def add_existing_place(self, place: tstore.Place):
         self.short_name_to_place[place.short_name] = place
 
-    def add_existing_club(self, club: sqlalchemy.Club):
+    def add_existing_club(self, club: tstore.Club):
         self.short_name_to_club[club.short_name] = club
 
-    def add_existing_pool(self, pool: sqlalchemy.Pool):
+    def add_existing_pool(self, pool: tstore.Pool):
         self.short_name_to_pool[pool.short_name] = pool
 
     def _new_place(self, a: attrib.Entity):
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
 
-        return sqlalchemy.Place(
+        return tstore.Place(
             # id isn't set
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
@@ -55,7 +55,7 @@ class StaticSyncer:
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
 
-        return sqlalchemy.Club(
+        return tstore.Club(
             # id isn't set
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
@@ -89,7 +89,7 @@ class StaticSyncer:
         if entity.short_name in self.short_name_to_club:
             old_club = self.short_name_to_club[entity.short_name]
             updated = False
-            for col in sqlalchemy.Club.__table__.columns:
+            for col in tstore.Club.__table__.columns:
                 name = col.name
                 if name in ('id', ):
                     continue
@@ -110,7 +110,7 @@ class StaticSyncer:
             old_place = self.short_name_to_place[entity.short_name]
             updated = False
             #for name in dir(new_place):
-            for col in sqlalchemy.Place.__table__.columns:
+            for col in tstore.Place.__table__.columns:
                 name = col.name
                 if name in ('id', ):
                     continue
@@ -144,7 +144,7 @@ class StaticSyncer:
         if entity.short_name in self.short_name_to_pool:
             old_pool = self.short_name_to_pool[entity.short_name]
             updated_columns = []
-            for col in sqlalchemy.Pool.__table__.columns:
+            for col in tstore.Pool.__table__.columns:
                 name = col.name
                 if name in ('id', ):
                     continue
@@ -169,7 +169,7 @@ class StaticSyncer:
         parent = self.short_name_to_place[a.parent_short_name]
         parent_id = parent and parent.id or None
 
-        return sqlalchemy.Pool(
+        return tstore.Pool(
             # id isn't set
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
@@ -185,11 +185,11 @@ class Importer:
         all_jsons = [*jsons_iterable]
         print(f'Going to import {len(all_jsons)} lines')
 
-        for p in sqlalchemy.Place.query.all():
+        for p in tstore.Place.query.all():
             self.updater.add_existing_place(p)
-        for c in sqlalchemy.Club.query.all():
+        for c in tstore.Club.query.all():
             self.updater.add_existing_club(c)
-        for p in sqlalchemy.Pool.query.all():
+        for p in tstore.Pool.query.all():
             self.updater.add_existing_pool(p)
 
         for j in all_jsons:
@@ -197,8 +197,8 @@ class Importer:
         print('Skipped types: ' + ','.join(set(self.skipped)))
         print('Adding ' + str(len(self.updater.to_add)))
         print('Updated fields ' + ','.join(self.updater.updated_fields))
-        sqlalchemy.db.session.add_all(self.updater.to_add)
-        sqlalchemy.db.session.commit()
+        tstore.db.session.add_all(self.updater.to_add)
+        tstore.db.session.commit()
 
 
 @sync_cli.command('import_jsonl')
@@ -242,11 +242,11 @@ def sort_entities(entities):
 
 def get_sorted_entities():
     entities: List[attrib.Entity] = []
-    for p in sqlalchemy.Place.query.all():
+    for p in tstore.Place.query.all():
         entities.append(p.as_attrib_entity())
-    for c in sqlalchemy.Club.query.all():
+    for c in tstore.Club.query.all():
         entities.append(c.as_attrib_entity())
-    for pl in sqlalchemy.Pool.query.all():
+    for pl in tstore.Pool.query.all():
         entities.append(pl.as_attrib_entity())
     return sort_entities(entities)
 

@@ -1,3 +1,7 @@
+"""
+Objects that store hockey tourist data for editing.
+"""
+
 import datetime
 import math
 import re

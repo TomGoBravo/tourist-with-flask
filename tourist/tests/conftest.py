@@ -5,7 +5,7 @@ from tourist import create_app
 import shutil
 import os.path
 from tourist.config import config
-import tourist.models.sqlalchemy
+import tourist.models.tstore
 
 from contextlib import contextmanager
 
@@ -13,7 +13,7 @@ from contextlib import contextmanager
 # From https://stackoverflow.com/a/51452451/341400
 @contextmanager
 def no_expire_on_commit():
-    s = tourist.models.sqlalchemy.db.session()
+    s = tourist.models.tstore.db.session()
     s.expire_on_commit = False
     try:
         yield
