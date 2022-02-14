@@ -73,7 +73,11 @@ def _validate_short_name(short_name):
             f"numbers (0-9), underscore (_) and dash (-). Found '{short_name}'")
 
 
-class Place(db.Model):
+class Entity:
+    pass
+
+
+class Place(db.Model, Entity):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     short_name = db.Column(db.String, nullable=False, unique=True)
@@ -211,7 +215,7 @@ club_pools = db.Table('club_pools',
 )
 
 
-class Club(db.Model):
+class Club(db.Model, Entity):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     short_name = db.Column(db.String, nullable=False, unique=True)
@@ -267,7 +271,7 @@ def club_as_attrib_entity(club, parent_short_name: str):
     )
 
 
-class Pool(db.Model):
+class Pool(db.Model, Entity):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     short_name = db.Column(db.String, nullable=False, unique=True)
@@ -377,7 +381,6 @@ class RenderCache(db.Model):
                      sqlite_on_conflict_primary_key='REPLACE')
     value_str = db.Column(db.String)
     value_dict = db.Column(JSONEncodedDict)
-
 
 
 sqlalchemy.orm.configure_mappers()

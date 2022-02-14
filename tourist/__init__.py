@@ -135,13 +135,13 @@ def create_app(default_config_object=config['dev']):
         for instance in session.new | session.dirty:
             if not session.is_modified(instance):
                 continue
-            if not hasattr(instance, 'as_attrib_entity'):
+            if not isinstance(instance, tstore.Entity):
                 continue
             instance.validate()
             update_render_after_flush = True
 
         for instance in session.deleted:
-            if not hasattr(instance, 'as_attrib_entity'):
+            if not isinstance(instance, tstore.Entity):
                 continue
             update_render_after_flush = True
 
@@ -157,7 +157,7 @@ def create_app(default_config_object=config['dev']):
             # objects used for the render to be refreshed from the database.
             # expire_all() breaks some login tests so expire only pool/place/club objects.
             for instance in session.identity_map.values():
-                if hasattr(instance, 'as_attrib_entity'):
+                if isinstance(instance, tstore.Entity):
                     session.expire(instance)
             new_cache_ids = []
             for new_cache in render_factory.yield_cache():
