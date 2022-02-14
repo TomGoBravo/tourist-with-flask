@@ -312,6 +312,12 @@ def test_delete_place(test_app):
         response = c.get('/tourist/delete/place/2')
         assert response.status_code == 302  # Without login
 
+        response = c.get('/tourist/place/metro')
+        assert response.status_code == 200
+
+        response = c.get('/tourist/place/cc')
+        assert "Metro" in response.get_data(as_text=True)
+
     with test_app.test_client(user=user) as c:
         response = c.get('/tourist/delete/place/2')
         assert response.status_code == 200
@@ -320,7 +326,7 @@ def test_delete_place(test_app):
         response = c.post(f'/tourist/delete/place/3', data=dict(csrf_token=c.csrf_token))
         assert response.status_code == 200
 
-    # Check that delete didn't happen
+    # Check that delete didn't happen because `confirm` was not set
     with test_app.app_context():
         assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 1
 
@@ -332,6 +338,13 @@ def test_delete_place(test_app):
 
     with test_app.app_context():
         assert sqlalchemy.Club.query.filter_by(short_name='shortie').count() == 0
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/place/metro')
+        assert response.status_code == 404
+
+        response = c.get('/tourist/place/cc')
+        assert "Metro" not in response.get_data(as_text=True)
 
 
 def test_delete_pool(test_app):
