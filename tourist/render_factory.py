@@ -2,6 +2,8 @@ import csv
 import enum
 import io
 from typing import Iterable
+from typing import List
+
 from sqlalchemy.util import IdentitySet
 
 import attrs
@@ -111,9 +113,9 @@ def yield_cache():
         all_objects -= tstore.db.session.deleted
         return list(filter(lambda obj: isinstance(obj, cls), all_objects))
 
-    all_places = get_all(tstore.Place)
-    all_clubs = get_all(tstore.Club)
-    all_pools = get_all(tstore.Pool)
+    all_places: List[tstore.Place] = get_all(tstore.Place)
+    all_clubs: List[tstore.Club] = get_all(tstore.Club)
+    all_pools: List[tstore.Pool] = get_all(tstore.Pool)
 
     for place in all_places:
         render_place = build_render_place(place)
@@ -125,10 +127,10 @@ def yield_cache():
                                          value_dict=attrs.asdict(
                                              render_names_world))
 
-    children_geojson = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
+    geojson_feature_collection = _build_geojson_feature_collection(all_places, all_pools)
+
     yield tstore.RenderCache(name=RenderName.POOLS_GEOJSON.value,
-                                 value_str=geojson.dumps(geojson.FeatureCollection(
-                                     children_geojson)))
+                             value_str=geojson.dumps(geojson_feature_collection))
 
     si = io.StringIO()
     cw = csv.DictWriter(si, extrasaction='ignore',
@@ -145,6 +147,16 @@ def yield_cache():
     for pool in all_pools:
         cw.writerow(attrs.asdict(pool.as_attrib_entity()))
     yield tstore.RenderCache(name=RenderName.CSV_ALL.value, value_str=si.getvalue())
+
+
+def _build_geojson_feature_collection(all_places, all_pools):
+    geojson_features = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
+    for p in all_places:
+        if p.child_places or p.child_pools:
+            continue
+        geojson_features.append(p.center_geojson_feature)
+    geojson_feature_collection = geojson.FeatureCollection(geojson_features)
+    return geojson_feature_collection
 
 
 def get_place(short_name: str) -> render.Place:

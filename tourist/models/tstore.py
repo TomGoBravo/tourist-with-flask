@@ -144,6 +144,18 @@ class Place(db.Model, Entity):
         return ('\u25cf' * circles) + ('\u25cb' * (7 - circles))
 
     @property
+    def center_geojson_feature(self) -> Dict:
+        if self.region is None:
+            return {}
+        else:
+            polygon = to_shape(self.region)
+            return {
+                'type': 'Feature',
+                'properties': {'title': self.name, 'path': self.path},
+                'geometry': shapely_mapping(polygon.centroid),
+            }
+
+    @property
     def path(self):
         return f'/tourist/place/{self.short_name}'
 
