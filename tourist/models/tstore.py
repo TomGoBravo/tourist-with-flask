@@ -7,6 +7,7 @@ import math
 import re
 from itertools import chain
 from typing import Dict, Union, Optional
+from typing import Iterable
 from typing import List
 
 import geojson
@@ -135,13 +136,8 @@ class Place(db.Model, Entity):
         return polygon.area
 
     @property
-    def area_text_scale(self):
-        area = self.area
-        if area > 0:
-            circles = min(int(math.log10(self.area) + 4), 7)
-        else:
-            circles = 0
-        return ('\u25cf' * circles) + ('\u25cb' * (7 - circles))
+    def path(self):
+        return f'/tourist/place/{self.short_name}'
 
     @property
     def center_geojson_feature(self) -> Dict:
@@ -156,25 +152,25 @@ class Place(db.Model, Entity):
             }
 
     @property
-    def path(self):
-        return f'/tourist/place/{self.short_name}'
+    def _pool_geojson_features(self) -> List[Dict]:
+        return [p.entrance_geojson_feature for p in self.child_pools if p.entrance_geojson_feature]
 
     @property
-    def descendant_places(self):
-        return self.child_places + list(chain.from_iterable(c.descendant_places for c in self.child_places))
+    def children_or_center_geojson_features(self) -> List[Dict]:
+        """Child places and pools of `self` or the center of the region. Use this to make sure
+        `self` appears in some way on a map."""
+        return self.children_geojson_features or [self.center_geojson_feature]
 
     @property
-    def _descendant_pools(self):
-        return self.child_pools + list(chain.from_iterable(p.child_pools for p in self.descendant_places))
-
-    @property
-    def geojson_children_collection(self):
-        children_geojson = [p.entrance_geojson_feature for p in self._descendant_pools if
-                            p.entrance_geojson_feature]
-        if children_geojson:
-            return geojson.FeatureCollection(children_geojson)
+    def children_geojson_features(self) -> List[Dict]:
+        """Child places and pools of `self` or an empty list if neither have geometry. Use this
+        when showing a map that is already zoomed to the region of `self`."""
+        pool_features = self._pool_geojson_features
+        if pool_features or self.child_places:
+            return pool_features + list(chain.from_iterable(c.children_or_center_geojson_features
+                                                            for c in self.child_places))
         else:
-            return {}
+            return []
 
     def as_attrib_entity(self):
         parent_short_name = self.parent and self.parent.short_name or ''

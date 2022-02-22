@@ -48,10 +48,7 @@ def build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
 
 
 def build_render_place(orm_place: tstore.Place) -> render.Place:
-
-    children_geojson = [p.entrance_geojson_feature for p in orm_place._descendant_pools if
-                        p.entrance_geojson_feature]
-
+    children_geojson = orm_place.children_geojson_features
     if children_geojson:
         geojson_children_collection = geojson.FeatureCollection(children_geojson)
     else:

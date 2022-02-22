@@ -53,22 +53,16 @@ def test_heavy(test_app):
         importer.run(open(path_relative('testentities.jsonl')).readlines())
         assert importer.updater.to_add == []
 
-    # test descendant_places
+    # test _geojson_features
     with test_app.app_context():
         au = tstore.Place.query.filter_by(short_name='au').first()
-        assert {c.short_name for c in au.descendant_places} == {
-            'newsouthwales',
-            'rydenewsouthwales',
-            'newcastlenewsouthwales',
-            'wollongongnewsouthwales'}
-        assert {c.short_name for c in au._descendant_pools} == {'theforumaquaticscentrene',
-                                                               'rydeaquaticcentrevictori',
-                                                               'wollongonguniversityaqua',
-                                                               'wollongonguniversityaqua2',
-                                                                }
+        assert {f['properties']['title'] for f in au.children_or_center_geojson_features} == {
+            "The Forum Aquatics Centre", "Ryde Aquatic Centre",
+            "Wollongong University Aquatics Center", "Wollongong University Aquatics Center 2"
+        }
 
         world = tstore.Place.query.filter_by(short_name='world').first()
-        assert len(world.descendant_places) == 5
+        assert len(world.children_or_center_geojson_features) == len(au.children_or_center_geojson_features)
 
     # Add a user
     with test_app.app_context():
@@ -131,7 +125,6 @@ def test_place_properties():
         region=WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,150.90 -34.42))')
     )
     assert place.area == approx(0.0012)
-    assert place.area_text_scale == '\u25cf\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb'
 
     place = tstore.Place(
         name='Test Name',
@@ -139,7 +132,6 @@ def test_place_properties():
         region=WKTElement('POLYGON(EMPTY)')
     )
     assert place.area == 0
-    assert place.area_text_scale == '\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb\u25cb'
 
 
 def test_validate_place():
