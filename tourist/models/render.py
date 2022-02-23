@@ -92,7 +92,7 @@ class PlaceRecursiveNames:
     id: int
     name: str
     path: str
-    area: int
+    area: float
     child_clubs: List["PlaceRecursiveNames.Club"]
     child_pools: List["PlaceRecursiveNames.Pool"]
     child_places: List["PlaceRecursiveNames"]

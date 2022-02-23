@@ -249,6 +249,22 @@ def test_list(test_app):
         assert 'Foo Club' in response.get_data(as_text=True)
         assert 'Metro Pool' in response.get_data(as_text=True)
 
+    with test_app.app_context():
+        metro = tstore.Place(
+            name='Metro Name',
+            short_name='metronogeom',
+            parent_id=2,
+            region=None,
+            markdown='',
+        )
+        tstore.db.session.add_all([metro])
+        tstore.db.session.commit()
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/list')
+        assert response.status_code == 200
+        assert 'Metro Name</a> (please add region)' in response.get_data(as_text=True)
+
 
 def test_club_with_bad_pool_link(test_app):
     add_some_entities(test_app)
