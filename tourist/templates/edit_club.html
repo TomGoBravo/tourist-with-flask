@@ -33,6 +33,7 @@ You are editing a club found in
 
 <form class="mui-form" method="POST" action="/tourist/edit/club/{{ club.id }}">
     {{ form.hidden_tag() }}
+    {{ place_comments_with_delete_checkbox(club.parent.comments) }}
     <div class="mui-textfield">
     <label>Club name</label>{{ form.name(size=20) }}
     </div>

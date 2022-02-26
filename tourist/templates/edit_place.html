@@ -47,10 +47,14 @@ You are editing
 {{ place.name }}
 </p>
 
+
 <p>You are looking at the simple edit form. There is a
 <a href="{{ url_for('place.edit_view', id=place.id) }}">complex admin edit interface</a>.</p>
 
 <form class="mui-form" method="POST" action="{{ url_for('.edit_place', place_id=place.id) }}">
+
+    {{ place_comments_with_delete_checkbox(place.comments) }}
+
     {{ form.hidden_tag() }}
     <div class="mui-textfield">
     <label>Place name</label>{{ form.name(size=20) }}

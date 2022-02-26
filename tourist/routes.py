@@ -1,5 +1,6 @@
 import collections
 import datetime
+import re
 from typing import List
 from typing import Optional
 
@@ -75,6 +76,7 @@ def edit_club(club_id):
     form = ClubForm(obj=club)
     if form.validate_on_submit():
         form.populate_obj(club)
+        form_delete_place_comments()
         flask.flash(f"Updated {club.name}")
         tstore.db.session.commit()
         return redirect(club.path)
@@ -98,10 +100,38 @@ def edit_place(place_id):
     form = PlaceForm(obj=place)
     if form.validate_on_submit():
         form.populate_obj(place)
+        form_delete_place_comments()
         flask.flash(f"Updated {place.name}")
         tstore.db.session.commit()
         return redirect(place.path)
     return render_template("edit_place.html", form=form, place=place)
+
+
+def form_delete_place_comments():
+    """Delete PlaceComment objects that are checked in the form"""
+    for k, v in flask.request.form.items():
+        m = re.fullmatch(r'delete_place_comment_(\d+)', k)
+        if m:
+            comment = tstore.PlaceComment.query.get(int(m.group(1)))
+            tstore.db.session.delete(comment)
+
+
+@tourist_bp.route("/add/place_comment/<int:place_id>", methods=['POST'])
+def add_place_comment(place_id):
+    place = tstore.Place.query.get_or_404(place_id)
+    content = flask.request.form['content'].strip()
+    if content:
+        place_comment = tstore.PlaceComment(
+            source=f"Web visitor at {flask.request.remote_addr}",
+            content=content,
+            place=place
+        )
+        tstore.db.session.add(place_comment)
+        tstore.db.session.commit()
+        flask.flash(f"Comment added to {place.name}")
+    else:
+        flask.flash(f"Ignored empty comment for {place.name}")
+    return redirect(place.path)
 
 
 class DeleteItemForm(FlaskForm):

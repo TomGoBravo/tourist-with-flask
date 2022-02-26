@@ -60,6 +60,14 @@ class Pool:
 
 
 @attrs.frozen()
+class PlaceComment:
+    id: int
+    timestamp: datetime.datetime
+    source: str
+    content: str
+
+
+@attrs.frozen()
 class Bounds:
     north: float
     south: float
@@ -85,6 +93,7 @@ class Place:
     bounds: Optional[Bounds]
     child_places: List[ChildPlace]
     parents: List[ChildPlace]
+    comments: List[PlaceComment] = attrs.field(factory=list)
 
 
 @attrs.frozen()
@@ -96,6 +105,7 @@ class PlaceRecursiveNames:
     child_clubs: List["PlaceRecursiveNames.Club"]
     child_pools: List["PlaceRecursiveNames.Pool"]
     child_places: List["PlaceRecursiveNames"]
+    comment_count: int = attrs.field(default=0)
 
     @attrs.frozen()
     class Club:
@@ -116,3 +126,5 @@ cattrs.register_structure_hook(
 cattrs.register_structure_hook(
     ForwardRef("PlaceRecursiveNames.Pool"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames.Pool),
 )
+cattrs.register_structure_hook(datetime.datetime, lambda d, t: datetime.datetime.fromisoformat(d))
+cattrs.register_unstructure_hook(datetime.datetime, lambda d: d.isoformat())

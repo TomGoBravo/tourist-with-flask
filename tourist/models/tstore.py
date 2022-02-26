@@ -75,6 +75,13 @@ def _validate_short_name(short_name):
 
 
 class Entity:
+    """Base class for the main objects."""
+    # TODO(TomGoBravo): Work out how to incorporate common methods (as_attrib_entity, ...) here.
+    pass
+
+
+class EntityChild:
+    """Base class for children of Entity objects. Updating these triggers a render cache flush."""
     pass
 
 
@@ -90,6 +97,11 @@ class Place(db.Model, Entity):
     status_comment = db.Column(db.String, nullable=True)
     status_date = db.Column(db.String, nullable=True)
     geonames_id = db.Column(db.Integer, nullable=True)
+
+    comments = db.relationship(
+        "PlaceComment",
+        back_populates='place',
+        cascade="all, delete-orphan")
 
     __versioned__ = {}
 
@@ -389,6 +401,16 @@ class RenderCache(db.Model):
                      sqlite_on_conflict_primary_key='REPLACE')
     value_str = db.Column(db.String)
     value_dict = db.Column(JSONEncodedDict)
+
+
+class PlaceComment(db.Model, EntityChild):
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String, nullable=False)
+    timestamp = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    content = db.Column(db.String)
+    place_id = db.Column(db.Integer, db.ForeignKey(Place.id))
+
+    place = db.relationship("Place", back_populates="comments")
 
 
 sqlalchemy.orm.configure_mappers()

@@ -144,13 +144,27 @@ Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point
 
 
 {% if current_user.edit_granted -%}
+{% for comment in place.comments %}<hr>
+Source: {{ comment.source }}<br>
+Time: {{ comment.timestamp }}<br>
+Content: {{ comment.content }}{% endfor -%}
     <hr>
     <h3>Add in {{ place.name }}:</h3>
     <a class="mui-btn" href="{{ url_for('place.create_view', parent=place.short_name) }}">place <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('club.create_view', parent=place.short_name) }}">club <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('pool.create_view', parent=place.short_name) }}">pool <i class="material-icons">add</i></a>
 {% else %}
-    <hr>
-    See the <a href="/tourist/about">about</a> page to update this page.
+{% if place.comments -%}<hr>There are comments about this place. Login to view and handle
+them.<hr>{% endif %}
 {% endif %}
+
+<form action="{{url_for('.add_place_comment', place_id=place.id)}}" method="POST">
+    <div class="mui-textfield"><label>Help us maintain this page. Enter corrections and updates
+        below. Include your contact information if you'd like us to follow up.</label>
+        <textarea id="content" name="content" rows="5"></textarea></div>
+    <input type="submit" value="Submit" class="mui-btn mui-btn--raised mui-btn--primary">
+</form>
+
+<hr>
+See the <a href="/tourist/about">about</a> page to update this page.
 {% endblock %}

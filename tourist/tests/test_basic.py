@@ -1,3 +1,4 @@
+import datetime
 from pprint import pprint
 
 import pytest
@@ -485,3 +486,40 @@ def test_attrib_dump():
     expected_output = '{"type": "place", "name": "Harare", "short_name": "hararemashonaland", "parent_short_name": "mashonaland", "region": {"type": "Polygon", "coordinates": [[[31.22037, -17.986784], [31.22037, -17.66865], [30.886373, -17.66865], [30.886373, -17.986784], [31.22037, -17.986784]]]}}'
     assert e.dump_as_jsons() == expected_output
 
+
+def test_add_delete_place_comment(test_app):
+    add_some_entities(test_app)
+    user = add_and_return_edit_granted_user(test_app)
+    place_id = 3
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/place/metro')
+        assert 'There are comments' not in response.get_data(as_text=True)
+
+        response = c.post(f'/tourist/add/place_comment/{place_id}',
+                          data=dict(content="test content"))
+        assert response.status_code == 302
+        assert response.location.endswith('/tourist/place/metro')
+
+        response = c.get('/tourist/place/metro')
+        assert 'There are comments' in response.get_data(as_text=True)
+
+    with test_app.test_client(user=user) as c:
+        response = c.get('/tourist/place/metro')
+        assert 'test content' in response.get_data(as_text=True)
+
+    # Check that deleting the place deletes the comment.
+    with test_app.app_context():
+        place = tstore.Place.query.get(place_id)
+        assert len(place.comments) == 1
+        assert place.comments[0].source == "Web visitor at 127.0.0.1"
+        assert 0 <= (datetime.datetime.utcnow() - place.comments[0].timestamp).total_seconds() <= 10
+        comment_id = place.comments[0].id
+        assert tstore.PlaceComment.query.get(comment_id)
+        # child_pools and child_clubs are not deleted by cascade. Delete them explicitly.
+        tstore.db.session.delete(place.child_pools[0])
+        tstore.db.session.delete(place.child_clubs[0])
+        tstore.db.session.delete(place)
+        tstore.db.session.commit()
+        # Check that comment_id was implicitly deleted by cascade.
+        assert tstore.PlaceComment.query.get(comment_id) is None

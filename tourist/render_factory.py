@@ -57,6 +57,8 @@ def build_render_place(orm_place: tstore.Place) -> render.Place:
     child_clubs = [build_render_club(c) for c in orm_place.child_clubs]
     child_pools = [build_render_pool(p) for p in orm_place.child_pools]
     child_places = [render.ChildPlace(p.path, p.name) for p in orm_place.child_places]
+    comments = [render.PlaceComment(id=c.id, timestamp=c.timestamp, content=c.content,
+                                    source=c.source) for c in orm_place.comments]
 
     parents = []
     p = orm_place.parent
@@ -86,6 +88,7 @@ def build_render_place(orm_place: tstore.Place) -> render.Place:
         bounds=bounds,
         child_places=child_places,
         parents=parents,
+        comments=comments,
     )
 
 
@@ -101,6 +104,7 @@ def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiv
         child_clubs=child_clubs,
         child_pools=child_pools,
         child_places=child_places,
+        comment_count=len(orm_place.comments),
     )
 
 
@@ -117,7 +121,7 @@ def yield_cache():
     for place in all_places:
         render_place = build_render_place(place)
         yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
-                                     value_dict=attrs.asdict(render_place))
+                                     value_dict=cattrs.unstructure(render_place))
         if place.short_name == 'world':
             render_names_world = build_place_recursive_names(place)
             yield tstore.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,

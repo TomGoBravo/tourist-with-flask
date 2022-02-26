@@ -135,15 +135,14 @@ def create_app(default_config_object=config['dev']):
         for instance in session.new | session.dirty:
             if not session.is_modified(instance):
                 continue
-            if not isinstance(instance, tstore.Entity):
-                continue
-            instance.validate()
-            update_render_after_flush = True
+            if isinstance(instance, (tstore.Entity, tstore.EntityChild)):
+                update_render_after_flush = True
+            if isinstance(instance, tstore.Entity):
+                instance.validate()
 
         for instance in session.deleted:
-            if not isinstance(instance, tstore.Entity):
-                continue
-            update_render_after_flush = True
+            if isinstance(instance, (tstore.Entity, tstore.EntityChild)):
+                update_render_after_flush = True
 
         if update_render_after_flush:
             session.info[UPDATE_RENDER_AFTER_FLUSH] = True

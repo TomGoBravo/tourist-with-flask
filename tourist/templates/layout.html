@@ -285,12 +285,22 @@ function toggleDisplayById(e_id, btn_id) {
     <title>{% block htmltitle %}{% endblock %}</title>
     {% block head_extras %}{% endblock %}
   </head>
+
+  {% macro place_comments_with_delete_checkbox(comments) %}
+  {% for comment in comments %}<hr>
+  Source: {{ comment.source }}<br>
+  Time: {{ comment.timestamp }}<br>
+  Content: {{ comment.content }}<br>
+  Delete comment: <input type="checkbox" name="delete_place_comment_{{comment.id}}" value="1"/>
+  {% endfor -%}
+  {% endmacro -%}
   <body>
 {% block bodytop %}{% endblock %}
 
 <div id="sidedrawer" class="mui--no-user-select">
 <div id="sidedrawer-brand" class="mui--appbar-line-height">
-<a href="/tourist/"><span class="mui--text-title">UWH Tourist</span></a>
+<a href="/tourist/"><span class="mui--text-title" title="Underwater Hockey Tourist">UWH
+  Tourist</span></a>
 </div>
 <div class="mui-divider"></div>
 {% block sidedrawercontent %}{% endblock %}
