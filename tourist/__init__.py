@@ -128,6 +128,8 @@ def create_app(default_config_object=config['dev']):
     app.cli.add_command(usertool_cli)
     from .scripts.batchtool import batchtool_cli
     app.cli.add_command(batchtool_cli)
+    from .scripts.scrape import scrape_cli
+    app.cli.add_command(scrape_cli)
 
     @event.listens_for(db.session, "before_flush")
     def before_flush(session, flush_context, instances):
