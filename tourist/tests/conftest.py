@@ -85,18 +85,16 @@ class FlaskClient(FlaskLoginClient):
             return csrf_token
 
 
-
-
-
 @pytest.fixture
 def test_app(tmp_path):
+    sqlite_database_path = tmp_path / 'tourist.db'
+
     class TestConfig(tourist.config.DevelopmentConfig):
-        SQLITE_DATABASE_PATH = str(tmp_path / 'touristtest.db')
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + SQLITE_DATABASE_PATH
+        DATA_DIR = tmp_path
         TESTING = True
         ALLOW_UNAUTHENTICATED_ADMIN = False
 
-    shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=TestConfig.SQLITE_DATABASE_PATH)
+    shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=sqlite_database_path)
     app = create_app(TestConfig())
     # FlaskLoginClient adds support for test_client(user=user)
     app.test_client_class = FlaskClient
