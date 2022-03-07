@@ -4,6 +4,7 @@ import re
 from logging.handlers import RotatingFileHandler
 import logging
 import os.path
+from typing import Optional
 
 import attrs
 import flask
@@ -17,7 +18,7 @@ import tourist.models.tstore
 from tourist import render_factory
 from tourist.models import tstore
 from sqlalchemy import event
-from tourist.config import config
+import tourist.config
 from flaskext.markdown import Markdown
 from flask_login import current_user
 
@@ -46,16 +47,14 @@ def humanize_date_str(date_str) -> str:
     return humanize.naturaltime(d)
 
 
-def create_app(default_config_object=config['dev']):
+def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
     """ Bootstrap function to initialise the Flask app and config """
     app = flask.Flask(__name__)
 
-    env_config_name = os.getenv('TOURIST_ENV')
-    if env_config_name is None:
-        config_object = default_config_object
-    else:
-        config_object = config[env_config_name]
+    if config_object is None:
+        config_object = tourist.config.by_env[app.env]
     app.config.from_object(config_object)
+
     if os.path.isfile('tourist/secrets.cfg'):
         print('Loading secrets.cfg')
         app.config.from_pyfile('secrets.cfg')
@@ -187,7 +186,3 @@ def initialise_logger(app):
 
     app.logger.addHandler(file_handler)
     app.logger.setLevel(log_level)
-
-
-# To get the factory-built app in tests use flask.current_app instead of accessing this directly.
-app = create_app()
