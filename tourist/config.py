@@ -4,7 +4,7 @@ import os
 mapbox_access_token = 'pk.eyJ1IjoidG9tZ29icmF2byIsImEiOiJjajZwZzVyZnYwdGZlMnFvMTZyaXR3bmU3In0.fM7v2OUbs3hsBgwgioVIaA'
 
 
-class EnvironmentConfig:
+class BaseConfig:
     """ Base class for config that is shared between environments """
     LOG_DIR = 'logs'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -16,23 +16,24 @@ class EnvironmentConfig:
     LEAFLET_CONTROL_GEOCODER = 1  # Enables geocoder control in flask-admin interface
 
 
-class ProdConfig(EnvironmentConfig):
+class ProductionConfig(BaseConfig):
     """ Production Environment Config """
     LOG_DIR = '/var/local/www-data'
     LOG_LEVEL = logging.INFO
     SQLALCHEMY_DATABASE_URI = 'sqlite:////var/local/www-data/tourist.db'
 
 
-class DevConfig(EnvironmentConfig):
+class DevelopmentConfig(BaseConfig):
     """ Dev Environment Config """
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.getenv('SQLITE_DB_PATH', __file__.replace('/config.py', '.db'))
     LOG_LEVEL = logging.DEBUG
     EXPLAIN_TEMPLATE_LOADING = False  # This is pretty noisy when enabled.
     USE_FAKE_LOGIN = True
+    TESTING = True
 
 
 # Pattern from app-deploy/config.py
-config = {
-    'production': ProdConfig,
-    'dev': DevConfig,
+by_env = {
+    'production': ProductionConfig(),
+    'development': DevelopmentConfig(),
 }

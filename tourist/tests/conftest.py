@@ -4,7 +4,7 @@ from flask_login import FlaskLoginClient
 from tourist import create_app
 import shutil
 import os.path
-from tourist.config import config
+import tourist.config
 import tourist.models.tstore
 
 from contextlib import contextmanager
@@ -90,14 +90,14 @@ class FlaskClient(FlaskLoginClient):
 
 @pytest.fixture
 def test_app(tmp_path):
-    class TestConfig(config['dev']):
+    class TestConfig(tourist.config.DevelopmentConfig):
         SQLITE_DATABASE_PATH = str(tmp_path / 'touristtest.db')
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + SQLITE_DATABASE_PATH
         TESTING = True
         ALLOW_UNAUTHENTICATED_ADMIN = False
 
     shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=TestConfig.SQLITE_DATABASE_PATH)
-    app = create_app(TestConfig)
+    app = create_app(TestConfig())
     # FlaskLoginClient adds support for test_client(user=user)
     app.test_client_class = FlaskClient
     yield app
