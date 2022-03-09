@@ -64,7 +64,8 @@ class PlaceComment:
     id: int
     timestamp: datetime.datetime
     source: str
-    content: str
+    content: Optional[str] = None
+    content_markdown: Optional[str] = None
 
 
 @attrs.frozen()

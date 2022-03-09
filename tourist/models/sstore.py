@@ -1,35 +1,79 @@
 from datetime import datetime
-
+from typing import Optional
+import attr
 from sqlalchemy import Column
 from sqlalchemy import DateTime
 from sqlalchemy import String
 from sqlalchemy import Integer
+from sqlalchemy import Table
 from sqlalchemy import UnicodeText
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session
+import sqlalchemy
+import sqlalchemy.orm
 
 
-Base = declarative_base()
+mapper_registry = sqlalchemy.orm.registry()
 
 
-class UrlFetch(Base):
-    __tablename__ = "urlfetch"
+@mapper_registry.mapped
+@attr.s(auto_attribs=True, kw_only=True)
+class UrlFetch:
+    __table__ = Table(
+        "urlfetch",
+        mapper_registry.metadata,
+        Column("source_short_name", String, nullable=False),
+        Column("url", String, primary_key=True),
+        Column("created_timestamp", DateTime, primary_key=True),
+        Column("unmodified_timestamp", DateTime, nullable=False),
+        Column("response", UnicodeText, nullable=False),
+        Column("extract_timestamp", DateTime, nullable=True),
+    )
+    source_short_name: str
+    url: str
+    created_timestamp: datetime = attr.ib(factory=lambda: datetime.utcnow())
+    unmodified_timestamp: datetime = attr.ib(default=attr.Factory(
+        lambda s: s.created_timestamp, takes_self=True))
+    response: str
 
-    source_short_name = Column(String, nullable=False)
-    url = Column(String, nullable=False, primary_key=True)
-    created_timestamp = Column(DateTime, nullable=False, primary_key=True, default=datetime.now())
-    unmodified_timestamp = Column(DateTime, nullable=False, default=datetime.now())
-    response = Column(UnicodeText, nullable=False)
+    # When extract is run `extract_timestamp` is set to `created_timestamp` of the EntityExtract
+    extract_timestamp: Optional[datetime] = None
 
 
-class FetchedEntity(Base):
-    __tablename__ = "fetchedentity"
+@mapper_registry.mapped
+@attr.s(auto_attribs=True, kw_only=True, cmp=False)
+class EntityExtract:
+    __table__ = Table(
+        "entityextract",
+        mapper_registry.metadata,
+        Column("source_short_name", String, nullable=False),
+        Column("url", String, nullable=False, primary_key=True),
+        Column("place_short_name", String, nullable=False, primary_key=True),
+        Column("created_timestamp", DateTime, nullable=False, primary_key=True),
+        Column("unmodified_timestamp", DateTime, nullable=False),
+        Column("markdown_content", UnicodeText, nullable=False),
+        Column("place_comment_id", Integer, nullable=True),
+    )
 
-    source_short_name = Column(String, nullable=False)
-    url = Column(String, nullable=False, primary_key=True)
-    place_short_name = Column(String, nullable=False, primary_key=True)
-    created_timestamp = Column(DateTime, nullable=False, primary_key=True, default=datetime.now())
-    unmodified_timestamp = Column(DateTime, nullable=False, default=datetime.now())
-    html_content = Column(UnicodeText, nullable=False)
-    markdown_content = Column(UnicodeText, nullable=False)
-    place_comment_id = Column(Integer, nullable=True)  # Foreign key in the tstore database
+    source_short_name: str
+    url: str
+    place_short_name: str
+    created_timestamp: datetime = attr.ib(factory=datetime.utcnow)
+    unmodified_timestamp: datetime = attr.ib(default=attr.Factory(
+        lambda s: s.created_timestamp, takes_self=True))
+    markdown_content: str
+    place_comment_id: Optional[int] = None # Foreign key in the tstore database
+
+    def _cmp_key(self):
+        return self.url, self.place_short_name, self.created_timestamp
+
+    def __eq__(self, other: 'EntityExtract'):
+        return self._cmp_key() == other._cmp_key()
+
+    def __lt__(self, other: 'EntityExtract'):
+        return self._cmp_key() < other._cmp_key()
+
+
+def make_session(engine_url: str):
+    engine = sqlalchemy.create_engine(engine_url)
+    mapper_registry.metadata.create_all(engine)
+    session = sqlalchemy.orm.Session(engine)
+    return session

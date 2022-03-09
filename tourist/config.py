@@ -18,8 +18,16 @@ class BaseConfig:
     DATA_DIR: pathlib.Path
 
     @property
+    def SQLITE_DB_PATH(self) -> str:
+        return f'{str(self.DATA_DIR)}/tourist.db'
+
+    @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return f'sqlite:///{str(self.DATA_DIR)}/tourist.db'
+        return f'sqlite:///{self.SQLITE_DB_PATH}'
+
+    @property
+    def SCRAPER_DATABASE_URI(self) -> str:
+        return f'sqlite:///{str(self.DATA_DIR)}/scraper.db'
 
 
 class ProductionConfig(BaseConfig):
@@ -37,17 +45,27 @@ class DevelopmentConfig(BaseConfig):
     TESTING = True
 
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> str:
-        sqlite_db_path = os.getenv('SQLITE_DB_PATH', str(self.DATA_DIR / 'tourist.db'))
-        return f'sqlite:///{sqlite_db_path}'
+    def SQLITE_DB_PATH(self) -> str:
+        return os.getenv('SQLITE_DB_PATH', super().SQLITE_DB_PATH)
 
     @property
     def DATA_DIR(self) -> pathlib.Path:
-        # This isn't tested because it is run when config.py is imported.
-        path = pathlib.Path(__file__).parent.parent / "dev-data"
+        # This isn't tested because it is run when SQLALCHEMY_DATABASE_URI is first accessed.
+        if 'DATA_DIR' in os.environ:
+            path = pathlib.Path(os.getenv('DATA_DIR'))
+        else:
+            path = pathlib.Path(__file__).parent.parent / "dev-data"
         if not path.exists():
             path.mkdir()
         return path
+
+
+def make_test_config(tmp_path: pathlib.Path) -> DevelopmentConfig:
+    class TestConfig(DevelopmentConfig):
+        DATA_DIR = tmp_path
+        TESTING = True
+        ALLOW_UNAUTHENTICATED_ADMIN = False
+    return TestConfig()
 
 
 by_env = {

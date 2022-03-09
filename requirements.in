@@ -22,6 +22,10 @@ pytest
 pip-tools
 humanize  # To format times
 more-itertools
+markdownify
+beautifulsoup4
+sortedcontainers
 
 # For testing:
 freezegun
+responses

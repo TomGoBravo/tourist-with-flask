@@ -407,7 +407,8 @@ class PlaceComment(db.Model, EntityChild):
     id = db.Column(db.Integer, primary_key=True)
     source = db.Column(db.String, nullable=False)
     timestamp = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
-    content = db.Column(db.String)
+    content = db.Column(db.String, nullable=True, default=None)
+    content_markdown = db.Column(db.String, nullable=True, default=None)
     place_id = db.Column(db.Integer, db.ForeignKey(Place.id))
 
     place = db.relationship("Place", back_populates="comments")

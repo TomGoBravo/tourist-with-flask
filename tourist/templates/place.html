@@ -144,10 +144,7 @@ Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point
 
 
 {% if current_user.edit_granted -%}
-{% for comment in place.comments %}<hr>
-Source: {{ comment.source }}<br>
-Time: {{ comment.timestamp }}<br>
-Content: {{ comment.content }}{% endfor -%}
+{{ place_comments(place.comments) }}
     <hr>
     <h3>Add in {{ place.name }}:</h3>
     <a class="mui-btn" href="{{ url_for('place.create_view', parent=place.short_name) }}">place <i class="material-icons">add</i></a>

@@ -87,15 +87,10 @@ class FlaskClient(FlaskLoginClient):
 
 @pytest.fixture
 def test_app(tmp_path):
-    sqlite_database_path = tmp_path / 'tourist.db'
+    config = tourist.config.make_test_config(tmp_path)
 
-    class TestConfig(tourist.config.DevelopmentConfig):
-        DATA_DIR = tmp_path
-        TESTING = True
-        ALLOW_UNAUTHENTICATED_ADMIN = False
-
-    shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=sqlite_database_path)
-    app = create_app(TestConfig())
+    shutil.copy(src=path_relative('spatial_metadata.sqlite'), dst=config.SQLITE_DB_PATH)
+    app = create_app(config)
     # FlaskLoginClient adds support for test_client(user=user)
     app.test_client_class = FlaskClient
     yield app

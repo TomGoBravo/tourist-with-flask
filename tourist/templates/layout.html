@@ -290,8 +290,17 @@ function toggleDisplayById(e_id, btn_id) {
   {% for comment in comments %}<hr>
   Source: {{ comment.source }}<br>
   Time: {{ comment.timestamp }}<br>
-  Content: {{ comment.content }}<br>
+  Content: {% if comment.content_markdown %} {{ comment.content_markdown|markdown }} {% else %} {{
+  comment.content }}{% endif %}<br>
   Delete comment: <input type="checkbox" name="delete_place_comment_{{comment.id}}" value="1"/>
+  {% endfor -%}
+  {% endmacro -%}
+  {% macro place_comments(comments) %}
+  {% for comment in comments %}<hr>
+  Source: {{ comment.source }}<br>
+  Time: {{ comment.timestamp }}<br>
+  Content: {% if comment.content_markdown %}{{ comment.content_markdown|markdown }}{% else
+  %}{{ comment.content }}{% endif %}<br>
   {% endfor -%}
   {% endmacro -%}
   <body>

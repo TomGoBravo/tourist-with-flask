@@ -58,6 +58,7 @@ def build_render_place(orm_place: tstore.Place) -> render.Place:
     child_pools = [build_render_pool(p) for p in orm_place.child_pools]
     child_places = [render.ChildPlace(p.path, p.name) for p in orm_place.child_places]
     comments = [render.PlaceComment(id=c.id, timestamp=c.timestamp, content=c.content,
+                                    content_markdown=c.content_markdown,
                                     source=c.source) for c in orm_place.comments]
 
     parents = []
