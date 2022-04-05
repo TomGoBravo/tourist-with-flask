@@ -24,8 +24,12 @@
 {% for p in world.child_places recursive %}
   <li><a href="{{ p.path }}">{{ p.name }}</a>{% if p.area == 0 %} (please add region){% endif
       %}{% if p.comment_count > 0 %} (please handle comments){% endif %}
-      {% if p.child_clubs %}<br> Clubs: {% for c in p.child_clubs %} {{ c.name }} {% endfor %} {% endif %}
-      {% if p.child_pools %}<br> Pools: {% for pl in p.child_pools %} {{ pl.name }} {% endfor %} {% endif %}
+      {% if p.child_clubs %}<br> Clubs: {% set comma = joiner(",") %}
+          {% for c in p.child_clubs %}{{ comma() }} {{ c.name }}{% endfor -%} {% endif %}
+      {% if p.child_pools %}<br> Pools: {% set comma = joiner(",") %}
+          {% for pl in p.child_pools %}{{ comma() }} {{ pl.name }}{% endfor -%} {% endif %}
+      {% if p.child_pools_without_club_back_links %}<br> Unused Pools: {% set comma = joiner(",") %}
+          {% for pl in p.child_pools_without_club_back_links %}{{ comma() }} {{ pl.name }}{% endfor -%} {% endif %}
   {% if p.child_places %}
     <ul>{{ loop(p.child_places) }}</ul>
   {% endif %}</li>

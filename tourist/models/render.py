@@ -105,6 +105,7 @@ class PlaceRecursiveNames:
     area: float
     child_clubs: List["PlaceRecursiveNames.Club"]
     child_pools: List["PlaceRecursiveNames.Pool"]
+    child_pools_without_club_back_links: List["PlaceRecursiveNames.Pool"]
     child_places: List["PlaceRecursiveNames"]
     comment_count: int = attrs.field(default=0)
 

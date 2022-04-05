@@ -96,7 +96,11 @@ def build_render_place(orm_place: tstore.Place) -> render.Place:
 def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiveNames:
     child_places = [build_place_recursive_names(p) for p in orm_place.child_places]
     child_clubs = [render.PlaceRecursiveNames.Club(c.name) for c in orm_place.child_clubs]
-    child_pools = [render.PlaceRecursiveNames.Pool(p.name) for p in orm_place.child_pools]
+    pools_with_links = list(p for p in orm_place.child_pools if bool(p.club_back_links))
+    pools_without_links = list(p for p in orm_place.child_pools if not bool(p.club_back_links))
+    child_pools = [render.PlaceRecursiveNames.Pool(p.name) for p in pools_with_links]
+    child_pools_without_club_back_links = [render.PlaceRecursiveNames.Pool(p.name) for p in
+                                           pools_without_links]
     return render.PlaceRecursiveNames(
         id=orm_place.id,
         name=orm_place.name,
@@ -104,6 +108,7 @@ def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiv
         area=orm_place.area,
         child_clubs=child_clubs,
         child_pools=child_pools,
+        child_pools_without_club_back_links=child_pools_without_club_back_links,
         child_places=child_places,
         comment_count=len(orm_place.comments),
     )
