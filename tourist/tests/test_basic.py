@@ -508,6 +508,10 @@ def test_add_delete_place_comment(test_app):
         response = c.get('/tourist/place/metro')
         assert 'test content' in response.get_data(as_text=True)
 
+        response = c.get('/tourist/comments')
+        assert 'test content' in response.get_data(as_text=True)
+        assert 'Metro Name' in response.get_data(as_text=True)
+
     # Check that deleting the place deletes the comment.
     with test_app.app_context():
         place = tstore.Place.query.get(place_id)

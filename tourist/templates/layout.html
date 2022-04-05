@@ -286,21 +286,24 @@ function toggleDisplayById(e_id, btn_id) {
     {% block head_extras %}{% endblock %}
   </head>
 
-  {% macro place_comments_with_delete_checkbox(comments) %}
-  {% for comment in comments %}<hr>
+  {% macro place_comment(comment) %}
   Source: {{ comment.source }}<br>
   Time: {{ comment.timestamp }}<br>
-  Content: {% if comment.content_markdown %} {{ comment.content_markdown|markdown }} {% else %} {{
-  comment.content }}{% endif %}<br>
+  <div class="mui-panel">
+  {% if comment.content_markdown %} {{ comment.content_markdown|markdown }} {% else %} {{
+  comment.content }}{% endif %}</div>
+  {% endmacro -%}
+
+  {% macro place_comments_with_delete_checkbox(comments) %}
+  {% for comment in comments %}<hr>
+  {{ place_comment(comment) }}
   Delete comment: <input type="checkbox" name="delete_place_comment_{{comment.id}}" value="1"/>
   {% endfor -%}
   {% endmacro -%}
+
   {% macro place_comments(comments) %}
   {% for comment in comments %}<hr>
-  Source: {{ comment.source }}<br>
-  Time: {{ comment.timestamp }}<br>
-  Content: {% if comment.content_markdown %}{{ comment.content_markdown|markdown }}{% else
-  %}{{ comment.content }}{% endif %}<br>
+  {{ place_comment(comment) }}
   {% endfor -%}
   {% endmacro -%}
   <body>

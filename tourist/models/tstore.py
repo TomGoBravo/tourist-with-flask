@@ -214,10 +214,15 @@ class User(db.Model, flask_login.UserMixin):
     name = db.Column(db.String(256))
     edit_granted = db.Column(db.Boolean, default=False)
 
+    @property
+    def can_view_comments(self) -> bool:
+        return self.edit_granted
+
 
 # Anonymous user with same attributes as a logged in `User` for consistency in templates.
 class AnonymousUser(flask_login.AnonymousUserMixin):
     edit_granted = False
+    can_view_comments = False
 
 
 class OAuth(OAuthConsumerMixin, db.Model):

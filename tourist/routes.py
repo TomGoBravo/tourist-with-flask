@@ -27,18 +27,18 @@ def mapbox_access_token():
 
 
 @tourist_bp.route("/")
-def home():
+def home_view_func():
     render_world = render_factory.get_place('world')
     return render_template("home.html", world=render_world, mapbox_access_token=mapbox_access_token())
 
 
 @tourist_bp.route("/map")
-def map():
+def map_view_func():
     return render_template("map.html", mapbox_access_token=mapbox_access_token())
 
 
 @tourist_bp.route("/about")
-def about():
+def about_view_func():
     return render_template("about.html")
 
 
@@ -263,7 +263,7 @@ class TransactionLog:
 
 
 @tourist_bp.route("/transactionlog")
-def log():
+def log_view_func():
     manager = tstore.Club.__versioning_manager__
     tx_column = manager.option(tstore.Club, 'transaction_column_name')
     transaction_logs = collections.defaultdict(TransactionLog)
@@ -283,9 +283,15 @@ def log():
 
 
 @tourist_bp.route("/list")
-def list():
+def list_view_func():
     render_world = render_factory.get_place_names_world()
     return render_template("list.html", world=render_world)
+
+
+@tourist_bp.route("/comments")
+def comments_view_func():
+    comments = list(tstore.PlaceComment.query.order_by(tstore.PlaceComment.timestamp).all())
+    return render_template("comments.html", comments=comments)
 
 
 @tourist_bp.route("/csv")

@@ -35,7 +35,10 @@ def inaccessible_response():
     # redirect to login page if not logged in
     current_app.logger.info(f'inaccessible_callback user={current_user} '
                             f'anon={current_user.is_anonymous} '
-                            f'authn={current_user.is_authenticated}')
+                            f'authn={current_user.is_authenticated} '
+                            f'url={flask.request.url} '
+                            f'remote_addr={flask.request.remote_addr} '
+                            f'user_agent={flask.request.user_agent}')
     if current_user.is_anonymous:
         return flask.redirect(flask.url_for('github.login', next=flask.request.url))
     else:
