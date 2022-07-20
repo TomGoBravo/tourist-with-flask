@@ -434,6 +434,21 @@ def test_place_not_found(test_app):
         assert response.status_code == 404
 
 
+def test_home(test_app):
+    add_some_entities(test_app)
+
+    with test_app.test_client() as c:
+        response = c.get('/tourist/', follow_redirects=True)
+        assert response.status_code == 200
+        assert 'found the Underwater Hockey Tourist' in response.get_data(as_text=True)
+
+        response = c.get('/tourist')
+        assert response.location.endswith('/tourist/')
+
+        response = c.get('/tourist/place/world')
+        assert response.location.endswith('/tourist/')
+
+
 def test_uwht_redirect(test_app):
     add_some_entities(test_app)
 

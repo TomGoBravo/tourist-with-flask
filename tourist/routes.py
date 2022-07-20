@@ -45,7 +45,7 @@ def about_view_func():
 @tourist_bp.route("/place/<string:short_name>")
 def place_short_name(short_name):
     if short_name == 'world':
-        return redirect(url_for('.home'))
+        return redirect(url_for('.home_view_func'))
     render_place = render_factory.get_place(short_name)
     return render_template("place.html", place=render_place,
                            mapbox_access_token=mapbox_access_token())
