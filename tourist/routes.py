@@ -26,20 +26,14 @@ def mapbox_access_token():
     return tstore.db.get_app().config['MAPBOX_ACCESS_TOKEN']
 
 
+# Render routes
+#
+# These routes read data from render_factory and don't modify stored data.
+
 @tourist_bp.route("/")
 def home_view_func():
     render_world = render_factory.get_place('world')
     return render_template("home.html", world=render_world, mapbox_access_token=mapbox_access_token())
-
-
-@tourist_bp.route("/map")
-def map_view_func():
-    return render_template("map.html", mapbox_access_token=mapbox_access_token())
-
-
-@tourist_bp.route("/about")
-def about_view_func():
-    return render_template("about.html")
 
 
 @tourist_bp.route("/place/<string:short_name>")
@@ -51,8 +45,52 @@ def place_short_name(short_name):
                            mapbox_access_token=mapbox_access_token())
 
 
+@tourist_bp.route("/data/pools.geojson")
+def data_all_geojson():
+    return render_factory.get_string(render_factory.RenderName.POOLS_GEOJSON)
+
+
+@tourist_bp.route("/csv")
+def csv_dump():
+    csv_str = render_factory.get_string(render_factory.RenderName.CSV_ALL)
+    output = flask.make_response(csv_str)
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+@tourist_bp.route("/list")
+def list_view_func():
+    render_world = render_factory.get_place_names_world()
+    return render_template("list.html", world=render_world)
+
+
+# Static routes
+#
+# These routes don't load any data from dynamic storage, but some templates have conditional
+# parts based on login state.
+
+@tourist_bp.route("/map")
+def map_view_func():
+    return render_template("map.html", mapbox_access_token=mapbox_access_token())
+
+
+@tourist_bp.route("/about")
+def about_view_func():
+    return render_template("about.html")
+
+
+@tourist_bp.route("/images/<path:path>")
+def old_images_file(path):
+    return flask.send_from_directory('static/pucku/images', path)
+
+
+# Edit routes
+#
+# These routes modify data in the tstore
+
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, DateField, BooleanField, FieldList
+from wtforms import StringField, TextAreaField, BooleanField
 
 
 def false_as_none(x):
@@ -215,6 +253,14 @@ def delete_pool(pool_id):
 
     return render_template('delete_pool.html', form=form, pool=pool)
 
+
+# Miscellaneous routes
+#
+# These routes don't fit in the above catagories
+
+# Once upon a time some of the markdown included links such as /page/<club shortname> and
+# /page/<pool shortname> and /page/<place shortname>. This function handles them, though it might
+# be nice to retire the links and this code.
 @tourist_bp.route("/page/<string:short_name>")
 def page_short_name(short_name):
     pool = tstore.Pool.query.filter_by(short_name=short_name).one_or_none()
@@ -236,16 +282,6 @@ def old_place_html_file(short_name):
         return redirect(url_for('.place_short_name', short_name=place.short_name))
     # Default to trying to send a few old static files
     return flask.send_from_directory('static/pucku', f'{short_name}.html')
-
-
-@tourist_bp.route("/images/<path:path>")
-def old_images_file(path):
-    return flask.send_from_directory('static/pucku/images', path)
-
-
-@tourist_bp.route("/data/pools.geojson")
-def data_all_geojson():
-    return render_factory.get_string(render_factory.RenderName.POOLS_GEOJSON)
 
 
 Transaction = transaction_class(tstore.Club)
@@ -282,22 +318,7 @@ def log_view_func():
     return render_template("transaction_log.html", transactions=transaction_logs.values())
 
 
-@tourist_bp.route("/list")
-def list_view_func():
-    render_world = render_factory.get_place_names_world()
-    return render_template("list.html", world=render_world)
-
-
 @tourist_bp.route("/comments")
 def comments_view_func():
     comments = list(tstore.PlaceComment.query.order_by(tstore.PlaceComment.timestamp).all())
     return render_template("comments.html", comments=comments)
-
-
-@tourist_bp.route("/csv")
-def csv_dump():
-    csv_str = render_factory.get_string(render_factory.RenderName.CSV_ALL)
-    output = flask.make_response(csv_str)
-    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-    output.headers["Content-type"] = "text/csv"
-    return output
