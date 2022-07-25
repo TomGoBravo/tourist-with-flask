@@ -1,8 +1,11 @@
+import itertools
 import json
+import warnings
 from collections import defaultdict
 from datetime import datetime
 import re
 from typing import Callable
+from typing import ForwardRef
 from typing import Iterable
 from typing import List
 from typing import Mapping
@@ -14,11 +17,14 @@ import bs4
 import cattrs
 import click
 import flask
+import geopy.point
+import geopy.distance
 import sqlalchemy.orm
 
 import requests
 from flask.cli import AppGroup
 from markdownify import MarkdownConverter
+from more_itertools import first
 from more_itertools import one
 from sortedcontainers import SortedList
 
@@ -194,9 +200,108 @@ def extract_sauwhf(parent_place: tstore.Place, fetch: sstore.UrlFetch) -> List[
     return results
 
 
+@attrs.frozen()
+class GbUwhFeed:
+    source: 'GbUwhFeed.Source'
+    clubs: List['GbUwhFeed.Club']
+
+    @attrs.frozen()
+    class Source:
+        name: str
+        icon: str
+
+    @attrs.frozen()
+    class Club:
+        unique_id: str
+        name: str
+        logo: str
+        region: str
+        sessions: List['GbUwhFeed.ClubSession']
+
+    @attrs.frozen()
+    class ClubSession:
+        day: str
+        latitude: float
+        longitude: float
+        location_name: str
+        type: str
+        title: str
+        start_time: str
+        end_time: str
+
+        def get_pool(self):
+            return GbUwhFeed.Pool(latitude=self.latitude, longitude=self.longitude,
+                                  name=self.location_name)
+
+    @attrs.frozen(eq=True, order=True)
+    class Pool:
+        latitude: float
+        longitude: float
+        name: str
+
+        @property
+        def point(self):
+            return geopy.point.Point(latitude=self.latitude, longitude=self.longitude)
+
+        @property
+        def short_name(self) -> str:
+            return re.sub(r'[\W_]', '', self.name.lower())
+
+
+# I haven't looked into why ClubSession needs to be explicitly registered, but this makes it work.
+cattrs.register_structure_hook(
+    ForwardRef("GbUwhFeed.ClubSession"), lambda d, t: cattrs.structure(d, GbUwhFeed.ClubSession),
+)
+
+
+@attrs.define(frozen=True, order=True, eq=True)
+class MetersPools:
+    """Two pools and the distance between them, used to debug two instances of a pool with
+    different names."""
+    meters: float
+    pool_1: GbUwhFeed.Pool
+    pool_2: GbUwhFeed.Pool
+
+    @staticmethod
+    def build(pool_1: GbUwhFeed.Pool, pool_2: GbUwhFeed.Pool) -> 'MetersPools':
+        return MetersPools(geopy.distance.distance(pool_1.point, pool_2.point).meters, pool_1, pool_2)
+
+
+def pool_distances_m(pools: Iterable[GbUwhFeed.Pool]) -> List[MetersPools]:
+    distances = []
+    for p1, p2 in itertools.combinations(pools, 2):
+        distances.append(MetersPools.build(p1, p2))
+    return distances
+
+
+def extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch) -> List[sstore.EntityExtract]:
+    results = []
+    place_searcher = PlaceSearcher(uk_place)
+    fetch_json = json.loads(fetch.response)
+    feed: GbUwhFeed = cattrs.structure(fetch_json, GbUwhFeed)
+    pools_by_short_name = defaultdict(set)
+    for club in feed.clubs:
+        for session in club.sessions:
+            pool = session.get_pool()
+            pools_by_short_name[pool.short_name].add(pool)
+    pool_by_short_name = {}
+    for pool_name, pool_set in pools_by_short_name.items():
+        if len(pool_set) != 1:
+            warnings.warn(f"Pool '{pool_name}' has varying attributes:" 
+                          f" {pool_distances_m(pool_set)}")
+            # Next line picks one arbitrarily
+        pool_by_short_name[pool_name] = min(pool_set)
+    for pool_distance in pool_distances_m(pool_by_short_name.values()):
+        if pool_distance.meters < 1_000:
+            warnings.warn(f"Pools less than 1km apart with different names: {pool_distance}")
+
+    return results
+
+
 sources = [
     Source("cuga-uwh", "http://cuga.org/en/where-and-when-uwh/", "ca", extract_cuga),
     Source("sauwhf", "https://sauwhf.co.za/clubs/", "za", extract_sauwhf),
+    Source("gbuwh-feed-clubs", "https://www.gbuwh.co.uk/feeds/clubs", "uk", extract_gbfeed),
 ]
 
 source_by_short_name = {source.short_name: source for source in sources}

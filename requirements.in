@@ -25,6 +25,7 @@ more-itertools
 markdownify
 beautifulsoup4
 sortedcontainers
+geopy
 
 # For testing:
 freezegun

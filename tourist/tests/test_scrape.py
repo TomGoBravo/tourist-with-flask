@@ -94,6 +94,35 @@ def test_load_and_extract(test_app):
     assert extract.place_comment_id is None
 
 
+def test_extract_gbuwh(test_app):
+    with test_app.app_context():
+        world = tstore.Place(name='World', short_name='world', markdown='')
+        uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
+                          region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                            '-10.69 51.03, 4.27 51.03))', srid=4326))
+
+        tstore.db.session.add_all([world, uk])
+        tstore.db.session.commit()
+
+    runner = ScrapeRunner(test_app.config['DATA_DIR'])
+    jsonl_path = path_relative('url-fetch-20220720T110811-gbuwh.jsonl')
+    runner.invoke_scrape(['load', f'--url-fetch-json-path={str(jsonl_path)}'])
+
+    session = sstore.make_session(test_app.config['SCRAPER_DATABASE_URI'])
+    fetch: sstore.UrlFetch = one(session.query(sstore.UrlFetch).all())
+    assert fetch.extract_timestamp is None
+
+    runner.invoke_scrape(['extract'])
+
+    session = sstore.make_session(test_app.config['SCRAPER_DATABASE_URI'])
+    fetch: sstore.UrlFetch = one(session.query(sstore.UrlFetch).all())
+    assert fetch.extract_timestamp is not None
+
+    # TODO(TomGoBravo): Work out what the extract will do and test it.
+    #extract: sstore.EntityExtract = one(session.query(sstore.EntityExtract).filter_by(
+    #    place_short_name='cabc').all())
+
+
 def add_canada(test_app):
     some_region = WKTElement('POLYGON((150.90 -34.42,150.90 -34.39,150.86 -34.39,150.86 -34.42,'
                               '150.90 -34.42))', srid=4326)

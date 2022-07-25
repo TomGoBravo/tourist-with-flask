@@ -61,7 +61,11 @@ freezegun==1.1.0
     # via -r requirements.in
 geoalchemy2==0.10.2
     # via -r requirements.in
+geographiclib==1.52
+    # via geopy
 geojson==2.4.1
+    # via -r requirements.in
+geopy==2.2.0
     # via -r requirements.in
 greenlet==1.1.2
     # via sqlalchemy
