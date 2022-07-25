@@ -1,9 +1,8 @@
 import datetime
 from typing import Dict, Iterable, List, Set
 
-from more_itertools import one
-from shapely.geometry import asShape
-from geoalchemy2.shape import from_shape, to_shape
+import shapely
+import shapely.wkt
 from flask.cli import AppGroup
 import click
 from tourist.models import tstore, attrib
@@ -257,3 +256,21 @@ def extract(output_path):
     out = open(output_path, 'w')
     for e in get_sorted_entities():
         out.write(e.dump_as_jsons() + '\n')
+
+
+def _output_place(place_short_name: List[str]):
+    for short_name in place_short_name:
+        p: tstore.Place = tstore.Place.query.filter_by(short_name=short_name).one()
+        if p.region:
+            region_wkt = shapely.wkt.dumps(to_shape(p.region), rounding_precision=2)
+            region_attr = f", region=WKTElement('{region_wkt}', srid=4326))"
+        else:
+            region_attr = ''
+        print(f"Place(name='{p.name}', short_name='{p.short_name}'{region_attr})")
+
+
+@sync_cli.command('output-place')
+@click.option('--place-short-name', multiple=True, default=[])
+def output_place(place_short_name):
+    """Print a tstore.Place literal string, which can be handy for writing tests."""
+    _output_place(place_short_name)
