@@ -347,6 +347,10 @@ class Pool(db.Model, Entity):
             }
 
     @property
+    def entrance_shapely(self):
+        return to_shape(self.entrance)
+
+    @property
     def maps_point_query(self) -> str:
         if self.entrance is None:
             return 'Please add pool location'

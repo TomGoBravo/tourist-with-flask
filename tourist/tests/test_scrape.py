@@ -1,6 +1,7 @@
+import json
 import pathlib
-import shutil
 from datetime import datetime
+from typing import Mapping
 from typing import Sequence
 
 import attr
@@ -10,17 +11,16 @@ from freezegun import freeze_time
 from geoalchemy2 import WKTElement
 from more_itertools import one
 
-import tourist.config
 from tourist.models import sstore
 from tourist.models import tstore
 from tourist.scripts import scrape
 from tourist.tests.conftest import path_relative
+from tourist.scripts.scrape import GbUwhFeed
 
 
 @responses.activate
-def test_fetch(monkeypatch):
-    source0 = scrape.sources[0]
-    monkeypatch.setattr(scrape, 'sources', [source0])
+def test_fetch():
+    source0 = scrape.SOURCES[0]
     responses.add(responses.GET, body="hello world", url=source0.url)
 
     session = sstore.make_session("sqlite://")
@@ -28,7 +28,7 @@ def test_fetch(monkeypatch):
     # First fetch
     created_datetime = datetime.fromisoformat("2022-03-08T21:04:00")
     with freeze_time(created_datetime):
-        scrape.fetch(session)
+        scrape.fetch(session, [source0])
 
     fetch = one(session.query(sstore.UrlFetch).all())
     expected_fetch = sstore.UrlFetch(
@@ -43,7 +43,7 @@ def test_fetch(monkeypatch):
     # Fetch again with same response
     fetch_again_datetime = datetime.fromisoformat("2022-03-08T22:04:00")
     with freeze_time(fetch_again_datetime):
-        scrape.fetch(session)
+        scrape.fetch(session, [source0])
     fetch = one(session.query(sstore.UrlFetch).all())
     expected_fetch = attr.evolve(expected_fetch, unmodified_timestamp=fetch_again_datetime)
     assert fetch == expected_fetch
@@ -52,7 +52,7 @@ def test_fetch(monkeypatch):
     responses.add(responses.GET, body="hello world, again", url=source0.url)
     fetch_updated_datetime = datetime.fromisoformat("2022-03-08T23:04:00")
     with freeze_time(fetch_updated_datetime):
-        scrape.fetch(session)
+        scrape.fetch(session, [source0])
     expected_fetch_again = attr.evolve(expected_fetch, created_timestamp=fetch_updated_datetime,
                                        unmodified_timestamp=fetch_updated_datetime,
                                        response="hello world, again")
@@ -94,29 +94,107 @@ def test_load_and_extract(test_app):
     assert extract.place_comment_id is None
 
 
-def test_extract_gbuwh(test_app):
+def test_extract_gbuwh_short(test_app):
+
     with test_app.app_context():
         world = tstore.Place(name='World', short_name='world', markdown='')
         uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
                           region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
                                             '-10.69 51.03, 4.27 51.03))', srid=4326))
+        north = tstore.Place(name='North', short_name='uknorth', parent=uk,
+                          region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                            '-10.69 51.03, 4.27 51.03))', srid=4326))
+        london = tstore.Place(name='London', short_name='uklon', parent=uk,
+                             region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                               '-10.69 51.03, 4.27 51.03))', srid=4326))
+        pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
+        poolgeo = tstore.Pool(name='London Pool', short_name='poolgeo', parent=london,
+                              markdown='', entrance=WKTElement('POINT(0 40)', srid=4326))
+        #poolwkb = from_shape(shapely.geometry.Point((5.0, 45.0)), srid=4326)
+        poolgeo2 = tstore.Pool(name='North Pool', short_name='poolgeo2', parent=north,
+                               markdown = '', entrance=WKTElement('POINT(5 45)', srid=4326))
 
-        tstore.db.session.add_all([world, uk])
+        tstore.db.session.add_all([world, uk, north, london, pool, poolgeo, poolgeo2])
         tstore.db.session.commit()
 
-    runner = ScrapeRunner(test_app.config['DATA_DIR'])
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        feed = GbUwhFeed(
+            source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
+            clubs=[
+                GbUwhFeed.Club(
+                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg', region='North',
+                    sessions=[
+                        GbUwhFeed.ClubSession(
+                            day='tuesday', latitude=53.45, longitude=-2.11,
+                            location_name='Denton', type='junior',
+                            title='Xarifa Juniors',
+                            start_time='19:00:00', end_time='20:00:00'),
+                        GbUwhFeed.ClubSession(
+                            day='thursday', latitude=53.47, longitude=-2.23,
+                            location_name='Manch', type='adult',
+                            title='Manchester session',
+                            start_time='21:00:00', end_time='22:00:00')
+                    ]),
+                ]
+        )
+        scrape.extract_gbfeed(uk, feed)
+
+    with test_app.app_context():
+        all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
+        assert set(all_pools.keys()) == {'Denton', 'Manch', 'PoolNoGeo'}
+        assert tuple(one(all_pools['Denton'].entrance_shapely.coords)) == (-2.11, 53.45)
+
+
+def test_group_distance():
+    # latitude where each 0.01 degrees longitude is 1km
+    magic_lat = 26.062468289
+
+    pools = [
+        scrape.Pool(latitude=magic_lat, longitude=0.000, name='a'),
+        scrape.Pool(latitude=magic_lat, longitude=0.009, name='b'),
+        scrape.Pool(latitude=magic_lat, longitude=0.009, name='c'),
+        scrape.Pool(latitude=magic_lat, longitude=0.018, name='d'),
+        scrape.Pool(latitude=magic_lat, longitude=0.029, name='e'),
+        scrape.Pool(latitude=magic_lat, longitude=0.038, name='f'),
+        scrape.Pool(latitude=magic_lat, longitude=0.049, name='g'),
+    ]
+
+    pool_groups = scrape.group_by_distance(pools, 1_000)
+    pool_names_by_group = []
+    for group in pool_groups:
+        pool_names_by_group.append(''.join(sorted(p.name for p in group)))
+    assert sorted(pool_names_by_group) == ['abcd', 'ef', 'g']
+
+
+def test_extract_gbuwh_long(test_app):
+    with test_app.app_context():
+        world = tstore.Place(name='World', short_name='world', markdown='')
+        uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
+                          region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                            '-10.69 51.03, 4.27 51.03))', srid=4326))
+        north = tstore.Place(name='North England', short_name='uknorth', parent=uk,
+                             region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                               '-10.69 51.03, 4.27 51.03))', srid=4326))
+        london = tstore.Place(name='London', short_name='uklon', parent=uk,
+                              region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
+                                                '-10.69 51.03, 4.27 51.03))', srid=4326))
+        poolden = tstore.Pool(name='Denton Wellness Center', short_name='denton', parent=north,
+                              markdown='', entrance=WKTElement('POINT(-2.1140 53.4575)',
+                                                               srid=4326))
+        poolgeo2 = tstore.Pool(name='Metro Pool', short_name='poolgeo2', parent=north,
+                               markdown='', entrance=WKTElement('POINT(5 45)', srid=4326))
+
+        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2])
+        tstore.db.session.commit()
+
     jsonl_path = path_relative('url-fetch-20220720T110811-gbuwh.jsonl')
-    runner.invoke_scrape(['load', f'--url-fetch-json-path={str(jsonl_path)}'])
+    json_line = one(open(jsonl_path).readlines())
+    url_fetch = scrape.converter.structure(json.loads(json_line), sstore.UrlFetch)
 
-    session = sstore.make_session(test_app.config['SCRAPER_DATABASE_URI'])
-    fetch: sstore.UrlFetch = one(session.query(sstore.UrlFetch).all())
-    assert fetch.extract_timestamp is None
-
-    runner.invoke_scrape(['extract'])
-
-    session = sstore.make_session(test_app.config['SCRAPER_DATABASE_URI'])
-    fetch: sstore.UrlFetch = one(session.query(sstore.UrlFetch).all())
-    assert fetch.extract_timestamp is not None
+    with test_app.app_context():
+        uk_place = one(tstore.Place.query.filter_by(short_name='uk').all())
+        scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
 
     # TODO(TomGoBravo): Work out what the extract will do and test it.
     #extract: sstore.EntityExtract = one(session.query(sstore.EntityExtract).filter_by(
