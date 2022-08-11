@@ -58,11 +58,22 @@ class Source:
 
 
 # latitude, longitude: the order expected by geopy.distance. This is opposite the order used by
-# shapely and WKT! Maybe make this a named tuple or attrs frozen class?
+# shapely and WKT!
 # shapely and geopy points are mutable and not hashable so I'm defining a very simple type
 # for locations. Altitude is NOT included because spatialite seems to silently drop WKB
 # coordinates with Z; it took me a while to work this out.
-PointTuple = Tuple[float, float]
+@attrs.frozen(eq=True, order=True, slots=True)
+class PointFrozen:
+    latitude: float
+    longitude: float
+
+    @property
+    def geopy_point(self):
+        return geopy.point.Point(self.latitude, self.longitude)
+
+
+def distance(pt1: PointFrozen, pt2: PointFrozen) -> geopy.distance.Distance:
+    return geopy.distance.distance(pt1.geopy_point, pt2.geopy_point)
 
 
 @attrs.frozen(eq=True, order=True)
@@ -76,7 +87,7 @@ class SourceContext:
 
 
 @attrs.frozen(eq=True, order=True)
-class Pool:
+class PoolFrozen:
     """A pool location and name, used when syncing pools from tstore and feed sources."""
     latitude: float
     longitude: float
@@ -88,13 +99,8 @@ class Pool:
         return sorted(set(c.source_short_name for c in self.contexts))
 
     @property
-    def point(self):
-        return geopy.point.Point(latitude=self.latitude, longitude=self.longitude)
-
-    @property
-    def point_tuple(self) -> PointTuple:
-        """Return the point as a bare tuple. Unlike Point, this is immutable and hashable."""
-        return (self.latitude, self.longitude)
+    def point_frozen(self) -> PointFrozen:
+        return PointFrozen(latitude=self.latitude, longitude=self.longitude)
 
     @property
     def point_wkb(self) -> geoalchemy2.shape.WKBElement:
@@ -223,7 +229,7 @@ class PlaceSearcher:
         for child_place in place.child_places:
             yield from self._places_recursive(child_place)
 
-    def get_all_pools(self) -> Iterable[Pool]:
+    def get_all_pools(self) -> Iterable[PoolFrozen]:
         for place in self._places_recursive():
             yield from tstore_to_pools(place.child_pools)
 
@@ -232,13 +238,13 @@ class PlaceSearcher:
             yield from place.child_clubs
 
 
-def tstore_to_pools(tstore_pools: Iterable[tstore.Pool]) -> Iterable[Pool]:
+def tstore_to_pools(tstore_pools: Iterable[tstore.Pool]) -> Iterable[PoolFrozen]:
    for p in tstore_pools:
        if p.entrance is None:
            warnings.warn(f"Skipping pool without entrance geometry: {p.name}", ScraperWarning)
            continue
        entrance_shapely = p.entrance_shapely
-       yield Pool(entrance_shapely.y, entrance_shapely.x, p.name, [SourceContext(
+       yield PoolFrozen(entrance_shapely.y, entrance_shapely.x, p.name, [SourceContext(
            'tstore', parent_id=p.parent.id, tstore_pool=p)])
 
 
@@ -353,8 +359,8 @@ def get_source_context(club: GbUwhFeed.Club, session: GbUwhFeed.ClubSession, sou
                          parent_id=region_place.id)
 
 
-def get_pool(session: GbUwhFeed.ClubSession) -> Pool:
-    return Pool(
+def get_pool(session: GbUwhFeed.ClubSession) -> PoolFrozen:
+    return PoolFrozen(
         session.latitude,
         session.longitude,
         session.location_name,
@@ -366,19 +372,19 @@ class MetersPools:
     """Two pools and the distance between them, used to debug two instances of a pool with
     different names."""
     meters: float
-    pool_1: Pool
-    pool_2: Pool
+    pool_1: PoolFrozen
+    pool_2: PoolFrozen
 
     @staticmethod
-    def build(pool_1: Pool, pool_2: Pool) -> 'MetersPools':
-        return MetersPools(geopy.distance.distance(pool_1.point, pool_2.point).meters, pool_1, pool_2)
+    def build(pool_1: PoolFrozen, pool_2: PoolFrozen) -> 'MetersPools':
+        return MetersPools(distance(pool_1.point_frozen, pool_2.point_frozen).meters, pool_1, pool_2)
 
 
-def cluster_points(point_tuples: Iterable[PointTuple], distance_meters: float) ->\
-        List[Set[PointTuple]]:
-    point_cluster = {pt: {pt} for pt in point_tuples}
-    for pt1, pt2 in itertools.combinations(point_tuples, 2):
-        if geopy.distance.distance(pt1, pt2).meters < distance_meters:
+def cluster_points(points: Iterable[PointFrozen], distance_meters: float) ->\
+        List[Set[PointFrozen]]:
+    point_cluster = {pt: {pt} for pt in points}
+    for pt1, pt2 in itertools.combinations(points, 2):
+        if distance(pt1, pt2).meters < distance_meters:
             new_cluster = {*point_cluster[pt1], *point_cluster[pt2]}
             for pt in new_cluster:
                 point_cluster[pt] = new_cluster
@@ -386,26 +392,27 @@ def cluster_points(point_tuples: Iterable[PointTuple], distance_meters: float) -
     return list(clusters_by_id.values())
 
 
-def group_by_distance(pools: Iterable[Pool], distance_meters: float) -> List[List[Pool]]:
-    point_tuples = set(p.point_tuple for p in pools)
-    point_clusters = cluster_points(point_tuples, distance_meters)
-    assert sorted(point_tuples) == sorted(itertools.chain(*point_clusters))
+def group_by_distance(pools: Iterable[PoolFrozen], distance_meters: float) -> List[List[PoolFrozen]]:
+    """Sorts pools into groups separated by at least given distance."""
+    points = set(p.point_frozen for p in pools)
+    point_clusters = cluster_points(points, distance_meters)
+    assert sorted(points) == sorted(itertools.chain(*point_clusters))
     # Map from every point tuple to a list shared by points within distance_meters.
-    pool_group_by_point = dict()
+    pool_group_by_point: Dict[PointFrozen: List[PoolFrozen]] = dict()
     list_of_pool_groups = []
     for point_cluster in point_clusters:
         # Make a new empty list object. It will be referenced once from list_of_pool_groups and
         # once for each point in pool_group_by_point.
-        pool_group = []
+        pool_group: List[PoolFrozen] = []
         list_of_pool_groups.append(pool_group)
         for pt in point_cluster:
             pool_group_by_point[pt] = pool_group
     for pool in pools:
-        pool_group_by_point[pool.point_tuple].append(pool)
+        pool_group_by_point[pool.point_frozen].append(pool)
     return list_of_pool_groups
 
 
-def pool_distances_m(pools: Iterable[Pool]) -> List[MetersPools]:
+def pool_distances_m(pools: Iterable[PoolFrozen]) -> List[MetersPools]:
     """Return the distance between every pair of the given pools."""
     distances = []
     for p1, p2 in itertools.combinations(pools, 2):
@@ -414,6 +421,14 @@ def pool_distances_m(pools: Iterable[Pool]) -> List[MetersPools]:
 
 
 class ScraperWarning(UserWarning):
+    pass
+
+
+class RegionNotFoundWarning(ScraperWarning):
+    pass
+
+
+class FeedContainsNonHttpsUrl(ScraperWarning):
     pass
 
 
@@ -428,7 +443,7 @@ def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch) -> 
     return extract_gbfeed(uk_place, feed)
 
 
-def merge_pools(pool_group: List[Pool]) -> Pool:
+def merge_pools(pool_group: List[PoolFrozen]) -> PoolFrozen:
     if len(pool_group) == 1:
         return one(pool_group)
     furthest = max(pool_distances_m(pool_group))
@@ -461,7 +476,7 @@ def _format_day(feed_day: str) -> str:
     }[feed_day]
 
 
-def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mapping[Pool, str],
+def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mapping[PoolFrozen, str],
                      feed: GbUwhFeed, source: Source, place: tstore.Place) -> tstore.Club:
     """Returns a transient/detached tstore.Club from information in the feed."""
     markdown_lines = []
@@ -474,7 +489,7 @@ def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mappi
             parsed_url = urlparse(link_str_value)
             if parsed_url.scheme not in ("https", "http"):
                 warnings.warn(f"{link_attr} expected https but {club.name} contains "
-                              f"'{link_str_value}'", ScraperWarning)
+                              f"'{link_str_value}'", FeedContainsNonHttpsUrl)
                 continue
             markdown_lines.append(f"* <{link_str_value}>")
     if club.sessions:
@@ -568,7 +583,7 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools) -> PoolSyncResults:
         if sources == ('tstore',):
             results.to_del.append(one(one(pool_group).contexts).tstore_pool)
         elif sources == (gbsource.short_name, ):
-            p: Pool = one(pool_group)
+            p: PoolFrozen = one(pool_group)
             new_pool_args = p.sqlalchemy_kwargs()
             new_pool = tstore.Pool(**new_pool_args)
             results.to_add.append(new_pool)
@@ -595,15 +610,15 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
         if 'Internal Admin only' in club.name:
             continue
         clubs_by_region[club.region].append(club)
-    # For feed pools with identical lat, lng, name create a single `Pool` object.
-    pools_by_value: Dict[Pool, Pool] = {}  # Pools by lat,lng,name.
+    # For feed pools with identical lat, lng, name create a single `PoolFrozen` object.
+    pools_by_value: Dict[PoolFrozen, PoolFrozen] = {}  # Pools by lat,lng,name.
     for region, clubs in list(clubs_by_region.items()):
         place_name = region_map.get(region, region)
         region_place = place_searcher.find_by_name(place_name)
         if region_place is None:
             warnings.warn(f"Region {region} mapped to place {place_name}, not found in tstore. "
                           f"Add it manually. Contains clubs: {', '.join(c.name for c in clubs)}",
-                          ScraperWarning)
+                          RegionNotFoundWarning)
             del clubs_by_region[region]
             continue
         for club in clubs:
@@ -636,11 +651,11 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
         tstore.db.session.delete(pool)
     tstore.db.session.commit()
 
-    committed_pools_by_point: Mapping[PointTuple: Pool] = {
-        p.point_tuple: p for p in place_searcher.get_all_pools()}
-    session_pool_to_pool_shortname: MutableMapping[Pool: str] = {}
+    committed_pools_by_point: Mapping[PointFrozen: PoolFrozen] = {
+        p.point_frozen: p for p in place_searcher.get_all_pools()}
+    session_pool_to_pool_shortname: MutableMapping[PoolFrozen: str] = {}
     for unique_pool in feed_unique_pools:
-            tstore_context = one(committed_pools_by_point[unique_pool.point_tuple].contexts)
+            tstore_context = one(committed_pools_by_point[unique_pool.point_frozen].contexts)
             pool_short_name = tstore_context.tstore_pool.short_name
             for ctx in unique_pool.contexts:
                 session_pool_to_pool_shortname[get_pool(ctx.session)] = pool_short_name

@@ -1,12 +1,15 @@
 import json
 import pathlib
+import warnings
 from datetime import datetime
 from typing import Mapping
 from typing import Sequence
 
 import attr
 import click.testing
+import pytest
 import responses
+import sqlalchemy.exc
 from freezegun import freeze_time
 from geoalchemy2 import WKTElement
 from more_itertools import one
@@ -16,6 +19,14 @@ from tourist.models import tstore
 from tourist.scripts import scrape
 from tourist.tests.conftest import path_relative
 from tourist.scripts.scrape import GbUwhFeed
+
+
+# Ignore "sqlalchemy_continuum/unit_of_work.py:263: SAWarning:  ..."
+# because it will take a while for them to be fixed. See
+# https://github.com/kvesteri/sqlalchemy-continuum/issues/255#issuecomment-1003629992
+# and
+# https://github.com/kvesteri/sqlalchemy-continuum/issues/263
+pytestmark = pytest.mark.filterwarnings("ignore", message=r".*implicitly coercing SELECT")
 
 
 @responses.activate
@@ -123,7 +134,7 @@ def test_extract_gbuwh_short(test_app):
 
     with test_app.app_context():
         all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
-        assert set(all_pools.keys()) == {'Denton', 'Manch', 'PoolNoGeo'}
+        assert set(all_pools.keys()) == {'Denton', 'Manch'}
         assert tuple(one(all_pools['Denton'].entrance_shapely.coords)) == (-2.11, 53.45)
 
         all_clubs: Mapping[str, tstore.Club] = {c.name: c for c in tstore.Club.query.all()}
@@ -135,13 +146,13 @@ def test_group_distance():
     magic_lat = 26.062468289
 
     pools = [
-        scrape.Pool(latitude=magic_lat, longitude=0.000, name='a'),
-        scrape.Pool(latitude=magic_lat, longitude=0.009, name='b'),
-        scrape.Pool(latitude=magic_lat, longitude=0.009, name='c'),
-        scrape.Pool(latitude=magic_lat, longitude=0.018, name='d'),
-        scrape.Pool(latitude=magic_lat, longitude=0.029, name='e'),
-        scrape.Pool(latitude=magic_lat, longitude=0.038, name='f'),
-        scrape.Pool(latitude=magic_lat, longitude=0.049, name='g'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.000, name='a'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.009, name='b'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.009, name='c'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.018, name='d'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.029, name='e'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.038, name='f'),
+        scrape.PoolFrozen(latitude=magic_lat, longitude=0.049, name='g'),
     ]
 
     pool_groups = scrape.group_by_distance(pools, 1_000)
@@ -168,9 +179,9 @@ def add_uk(test_app):
                                                                srid=4326))
         poolgeo2 = tstore.Pool(name='Metro Pool', short_name='poolgeo2', parent=north,
                                markdown='', entrance=WKTElement('POINT(5 45)', srid=4326))
-        pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
+    #    pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
 
-        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2, pool])
+        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2])
         tstore.db.session.commit()
 
 
@@ -183,7 +194,19 @@ def test_extract_gbuwh_long(test_app):
 
     with test_app.app_context():
         uk_place = one(tstore.Place.query.filter_by(short_name='uk').all())
-        scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
+
+    expected_categories = [scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,
+                           scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,
+                           scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,
+                           scrape.RegionNotFoundWarning,
+                           scrape.FeedContainsNonHttpsUrl,
+                           scrape.FeedContainsNonHttpsUrl, scrape.FeedContainsNonHttpsUrl]
+    found_categories = [w.category for w in caught_warnings]
+    assert expected_categories == found_categories
 
 
 def add_canada(test_app):
