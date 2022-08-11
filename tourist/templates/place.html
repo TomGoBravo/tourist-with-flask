@@ -50,14 +50,18 @@
 </ul>
 
 {% for club in place.child_clubs %}
-<h3 id='{{ club.short_name }}'>{{ club.name }}
+<h3 id='{{ club.short_name }}'>
+    {%- if club.logo_url %}<img src="{{club.logo_url}}" width="60" height="60">{% endif -%}
+    {{ club.name }}
     {% if current_user.edit_granted -%}
     <a href="{{ url_for('.edit_club', club_id=club.id) }}" title="Edit club">✎</a>
     <a href="{{ url_for('.delete_club', club_id=club.id) }}" title="Delete club">🗑</a>
     {% endif %}
 </h3>
 
-{% if club.status_date -%} {# TODO(TomGoBravo): Remove condition when status_date is always set #}
+{% if club.source_name %}<div class="mui--text-dark-secondary">Information provided by
+    {{club.source_name}}</div>{% endif -%}
+{% if club.status_date -%}
 <div class="mui--text-subhead">{{ club.club_state.value }} ️as of {{ club.status_date |
     humanize_date_str }}</div>
 {% endif -%}
@@ -68,8 +72,8 @@
 {% for pool in place.child_pools %}
 <h3 id='{{ pool.short_name }}'>{{ pool.name }}
     {% if current_user.edit_granted -%}
-    <a href="{{ url_for('pool.edit_view', id=pool.id) }}" title="Edit pool">✎</a>{% endif %}
-    <a href="{{ url_for('.delete_pool', pool_id=pool.id) }}" title="Delete pool">🗑</a>
+    <a href="{{ url_for('pool.edit_view', id=pool.id) }}" title="Edit pool">✎</a>
+    <a href="{{ url_for('.delete_pool', pool_id=pool.id) }}" title="Delete pool">🗑</a>{% endif -%}
 </h3>
 <p>{{ pool.markdown|markdown }}</p>
 <p>{% if pool.club_back_links -%}

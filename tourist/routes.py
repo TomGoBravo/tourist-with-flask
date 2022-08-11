@@ -5,7 +5,6 @@ from typing import List
 from typing import Optional
 
 import attr
-import attrs
 import flask
 import flask_login
 import sqlalchemy_continuum

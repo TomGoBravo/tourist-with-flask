@@ -15,6 +15,15 @@ from tourist.models import render
 from tourist.models import tstore
 
 
+# Hacky map from source short name to name to render on page. This seems better than keeping
+# something in the tstore database in-sync or having render_factory.py depend on scrape.py.
+SOURCE_NAMES = {
+    "cuga-uwh": "CUGA where and when page",
+    "sauwhf": "SA UWHF club list",
+    "gbuwh-feed-clubs": "GBUWH club feed",
+}
+
+
 @enum.unique
 class RenderName(enum.Enum):
     PLACE_PREFIX = "/place/"
@@ -30,6 +39,8 @@ def build_render_club(orm_club: tstore.Club) -> render.Club:
         short_name=orm_club.short_name,
         markdown=orm_club.markdown,
         status_date=orm_club.status_date,
+        logo_url=orm_club.logo_url,
+        source_name=SOURCE_NAMES.get(orm_club.source_short_name, None),
     )
 
 

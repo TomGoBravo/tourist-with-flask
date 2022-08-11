@@ -250,7 +250,12 @@ class Club(db.Model, Entity):
     pools = db.relationship('Pool', secondary=club_pools, lazy='subquery',
         backref=db.backref('clubs', lazy=True))
     status_comment = db.Column(db.String, nullable=True)
+    # status_date is not set for clubs with source_short_name because we don't know when it was
+    # last checked or verified.
     status_date = db.Column(db.String, nullable=True)
+    source_short_name = db.Column(db.String, nullable=True)
+    source_key = db.Column(db.String, nullable=True)
+    logo_url = db.Column(db.String, nullable=True)
 
     __versioned__ = {}
 

@@ -1,5 +1,8 @@
 import datetime
+from typing import Collection
 from typing import Dict, Iterable, List, Set
+from typing import Sequence
+from typing import Tuple
 
 import shapely
 import shapely.wkt
@@ -14,6 +17,23 @@ import json
 
 
 sync_cli = AppGroup('sync')
+
+
+def sync_club(new_club: tstore.Club, old_club: tstore.Club, ignore_columns=Collection[str]) -> \
+        Tuple[bool, Set[str]]:
+    updated = False
+    club_columns = set()
+    for col in tstore.Club.__table__.columns:
+        name = col.name
+        if name in ignore_columns:
+            continue
+        club_columns.add(name)
+        old_value = getattr(old_club, name)
+        new_value = getattr(new_club, name)
+        if old_value != new_value:
+            setattr(old_club, name, new_value)
+            updated = True
+    return updated, club_columns
 
 
 @attr.s(auto_attribs=True)
@@ -87,17 +107,8 @@ class StaticSyncer:
         new_club = self._new_club(entity)
         if entity.short_name in self.short_name_to_club:
             old_club = self.short_name_to_club[entity.short_name]
-            updated = False
-            for col in tstore.Club.__table__.columns:
-                name = col.name
-                if name in ('id', ):
-                    continue
-                self.club_columns.add(name)
-                old_value = getattr(old_club, name)
-                new_value = getattr(new_club, name)
-                if old_value != new_value:
-                    setattr(old_club, name, new_value)
-                    updated = True
+            _, club_columns = sync_club(new_club, old_club, ignore_columns=('id',))
+            self.club_columns.update(club_columns)
         else:
             new_club.id = len(self.short_name_to_club)
             self.to_add.append(new_club)

@@ -30,6 +30,8 @@ class Club:
     short_name: str
     markdown: str
     status_date: Optional[str]
+    logo_url: Optional[str] = None
+    source_name: Optional[str] = None
 
     @property
     def club_state(self) -> ClubState:

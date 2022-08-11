@@ -95,27 +95,7 @@ def test_load_and_extract(test_app):
 
 
 def test_extract_gbuwh_short(test_app):
-
-    with test_app.app_context():
-        world = tstore.Place(name='World', short_name='world', markdown='')
-        uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
-                          region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
-                                            '-10.69 51.03, 4.27 51.03))', srid=4326))
-        north = tstore.Place(name='North', short_name='uknorth', parent=uk,
-                          region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
-                                            '-10.69 51.03, 4.27 51.03))', srid=4326))
-        london = tstore.Place(name='London', short_name='uklon', parent=uk,
-                             region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
-                                               '-10.69 51.03, 4.27 51.03))', srid=4326))
-        pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
-        poolgeo = tstore.Pool(name='London Pool', short_name='poolgeo', parent=london,
-                              markdown='', entrance=WKTElement('POINT(0 40)', srid=4326))
-        #poolwkb = from_shape(shapely.geometry.Point((5.0, 45.0)), srid=4326)
-        poolgeo2 = tstore.Pool(name='North Pool', short_name='poolgeo2', parent=north,
-                               markdown = '', entrance=WKTElement('POINT(5 45)', srid=4326))
-
-        tstore.db.session.add_all([world, uk, north, london, pool, poolgeo, poolgeo2])
-        tstore.db.session.commit()
+    add_uk(test_app)
 
     with test_app.app_context():
         uk = one(tstore.Place.query.filter_by(short_name='uk').all())
@@ -123,7 +103,8 @@ def test_extract_gbuwh_short(test_app):
             source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
             clubs=[
                 GbUwhFeed.Club(
-                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg', region='North',
+                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg',
+                    region='North', website='https://foo.com',
                     sessions=[
                         GbUwhFeed.ClubSession(
                             day='tuesday', latitude=53.45, longitude=-2.11,
@@ -144,6 +125,9 @@ def test_extract_gbuwh_short(test_app):
         all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
         assert set(all_pools.keys()) == {'Denton', 'Manch', 'PoolNoGeo'}
         assert tuple(one(all_pools['Denton'].entrance_shapely.coords)) == (-2.11, 53.45)
+
+        all_clubs: Mapping[str, tstore.Club] = {c.name: c for c in tstore.Club.query.all()}
+        assert set(all_clubs.keys()) == {'Xarifa UWH'}
 
 
 def test_group_distance():
@@ -167,13 +151,13 @@ def test_group_distance():
     assert sorted(pool_names_by_group) == ['abcd', 'ef', 'g']
 
 
-def test_extract_gbuwh_long(test_app):
+def add_uk(test_app):
     with test_app.app_context():
         world = tstore.Place(name='World', short_name='world', markdown='')
         uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
                           region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
                                             '-10.69 51.03, 4.27 51.03))', srid=4326))
-        north = tstore.Place(name='North England', short_name='uknorth', parent=uk,
+        north = tstore.Place(name='North', short_name='uknorth', parent=uk,
                              region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
                                                '-10.69 51.03, 4.27 51.03))', srid=4326))
         london = tstore.Place(name='London', short_name='uklon', parent=uk,
@@ -184,9 +168,14 @@ def test_extract_gbuwh_long(test_app):
                                                                srid=4326))
         poolgeo2 = tstore.Pool(name='Metro Pool', short_name='poolgeo2', parent=north,
                                markdown='', entrance=WKTElement('POINT(5 45)', srid=4326))
+        pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
 
-        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2])
+        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2, pool])
         tstore.db.session.commit()
+
+
+def test_extract_gbuwh_long(test_app):
+    add_uk(test_app)
 
     jsonl_path = path_relative('url-fetch-20220720T110811-gbuwh.jsonl')
     json_line = one(open(jsonl_path).readlines())
@@ -195,10 +184,6 @@ def test_extract_gbuwh_long(test_app):
     with test_app.app_context():
         uk_place = one(tstore.Place.query.filter_by(short_name='uk').all())
         scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
-
-    # TODO(TomGoBravo): Work out what the extract will do and test it.
-    #extract: sstore.EntityExtract = one(session.query(sstore.EntityExtract).filter_by(
-    #    place_short_name='cabc').all())
 
 
 def add_canada(test_app):
