@@ -1,7 +1,6 @@
 import csv
 import enum
 import io
-from typing import Iterable
 from typing import List
 
 from sqlalchemy.util import IdentitySet
@@ -20,7 +19,7 @@ from tourist.models import tstore
 SOURCE_NAMES = {
     "cuga-uwh": "CUGA where and when page",
     "sauwhf": "SA UWHF club list",
-    "gbuwh-feed-clubs": "GBUWH club feed",
+    "gbuwh-feed-clubs": "GBUWH",
 }
 
 

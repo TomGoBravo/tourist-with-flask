@@ -1,5 +1,4 @@
 import datetime
-import json
 import re
 from collections import defaultdict
 from typing import Dict
@@ -7,6 +6,7 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Set
+from typing import Tuple
 from typing import Type
 
 import attr
@@ -19,7 +19,6 @@ from tourist import render_factory
 from tourist.models import attrib
 from tourist.models import tstore
 from tourist.models.tstore import PAGE_LINK_RE
-from tourist.models.tstore import optional_geometry_to_shape
 from tourist.scripts import sync
 
 batchtool_cli = AppGroup('batchtool')
@@ -384,6 +383,37 @@ def transactioninsert1(initial_snapshot: str, change_log: str, output_path: str,
         out.write(e.dump_as_jsons() + '\n')
 
     if commit:
+        click.echo('Committing changes')
+        tstore.db.session.commit()
+    else:
+        click.echo('Run with --write to commit changes')
+
+
+@batchtool_cli.command('remove-empty-places')
+@click.argument('descendants-of-short-name')
+@click.option('--write', is_flag=True)
+def remove_empty_places(descendants_of_short_name: str, write: bool):
+    base_place = tstore.Place.query.filter_by(short_name=descendants_of_short_name).one()
+
+    def _find_empty(place: tstore.Place) -> Tuple[bool, List]:
+        results = []
+        empty = not(place.child_pools or place.child_clubs or place.markdown)
+        for child_place in place.child_places:
+            child_is_empty, empty_descendants = _find_empty(child_place)
+            if not child_is_empty:
+                empty = False
+            results.extend(empty_descendants)
+        if empty:
+            results.append(place)
+        return empty, results
+
+    _, empty_places = _find_empty(base_place)
+
+    click.echo(f'Found empty places {", ".join(sorted(place.name for place in empty_places))}')
+
+    if write:
+        for place in empty_places:
+            tstore.db.session.delete(place)
         click.echo('Committing changes')
         tstore.db.session.commit()
     else:

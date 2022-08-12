@@ -81,8 +81,8 @@ class SourceContext:
     source_short_name: str
     club_name: str = ''
     session: Optional['GbUwhFeed.ClubSession'] = None
-    region: str = ''
     parent_id: Optional[int] = None
+    parent_short_name: Optional[str] = None
     tstore_pool: Optional[tstore.Pool] = None
 
 
@@ -356,7 +356,7 @@ gbuwhfeed_converter.register_structure_hook(
 def get_source_context(club: GbUwhFeed.Club, session: GbUwhFeed.ClubSession, source: Source,
                        region_place: tstore.Place):
     return SourceContext(source.short_name, club_name=club.name, session=session,
-                         parent_id=region_place.id)
+                         parent_id=region_place.id, parent_short_name=region_place.short_name)
 
 
 def get_pool(session: GbUwhFeed.ClubSession) -> PoolFrozen:
@@ -436,6 +436,10 @@ class ScraperError(ValueError):
     pass
 
 
+class PoolRegionChanged(ScraperError):
+    pass
+
+
 def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch) -> List[
     sstore.EntityExtract]:
     fetch_json = json.loads(fetch.response)
@@ -464,16 +468,30 @@ def _format_time(feed_time: str) -> str:
     return re.sub(r":00\Z", "", feed_time)
 
 
-def _format_day(feed_day: str) -> str:
-    return {
-        "monday": "Mondays",
-        "tuesday": "Tuesdays",
-        "wednesday": "Wednesdays",
-        "thursday": "Thursdays",
-        "friday": "Fridays",
-        "saturday": "Saturdays",
-        "sunday": "Sundays",
-    }[feed_day]
+_DAY_MAP = {
+    "monday": "Mondays",
+    "tuesday": "Tuesdays",
+    "wednesday": "Wednesdays",
+    "thursday": "Thursdays",
+    "friday": "Fridays",
+    "saturday": "Saturdays",
+    "sunday": "Sundays",
+}
+
+
+_TYPE_MAP = {
+    "junior": "juniors",
+    "student": "students",
+}
+
+
+def _format_title(session: GbUwhFeed.ClubSession) -> str:
+    title_parts = [session.title]
+    if session.day not in session.title.lower():
+        title_parts.append(f" on {_DAY_MAP[session.day]}")
+    if session.type != "adult" and session.type not in session.title.lower():
+        title_parts.append(f" for {_TYPE_MAP[session.type]}")
+    return "".join(title_parts)
 
 
 def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mapping[PoolFrozen, str],
@@ -498,7 +516,7 @@ def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mappi
         pool = get_pool(session)
         short_name = session_pool_to_pool_shortname[pool]
 
-        markdown_lines.append(f"* {_format_day(session.day)} from "
+        markdown_lines.append(f"* {_format_title(session)} from "
                               f"{_format_time(session.start_time)} to "
                               f"{_format_time(session.end_time)} at [[{short_name}]]")
 
@@ -575,7 +593,7 @@ class PoolSyncResults:
             f"unmodified: {', '.join(c.name for c in self.unmodified)}\n")
 
 
-def gbuwh_sync_pools(gbsource, grouped_union_of_pools) -> PoolSyncResults:
+def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -> PoolSyncResults:
     results = PoolSyncResults()
     for pool_group in grouped_union_of_pools:
         pool_group.sort(key=lambda pool: one(pool.source_short_name))
@@ -588,14 +606,22 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools) -> PoolSyncResults:
             new_pool = tstore.Pool(**new_pool_args)
             results.to_add.append(new_pool)
         elif sources == (gbsource.short_name, 'tstore'):
-            feed_pool, tstore_pool = pool_group
-            orm_pool = one(tstore_pool.contexts).tstore_pool
-            orm_pool.name = feed_pool.name
-            orm_pool.entrance = feed_pool.point_wkb
-            # XXX Check that regions are consistent
-            # orm_pool.parent = region_place
-            # XXX check for unmodified unmod
-            results.updated.append(orm_pool)
+            feed_pool_frozen, tstore_pool_frozen = pool_group
+            existing_pool = one(tstore_pool_frozen.contexts).tstore_pool
+            new_pool = tstore.Pool(**feed_pool_frozen.sqlalchemy_kwargs())
+            updated_columns = sync.sync_pool_objects(new_pool=new_pool, old_pool=existing_pool,
+                                                     ignore_columns=('id', 'short_name',
+                                                                     'status_date', 'parent_id'))
+            if new_pool.parent_id != existing_pool.parent_id:
+                new_parent_short_name = one(set(ctx.parent_short_name for ctx in
+                                                feed_pool_frozen.contexts))
+                raise PoolRegionChanged(f"Pool {existing_pool.name} region changed from "
+                                        f"{existing_pool.parent.short_name} to "
+                                        f"{new_parent_short_name}")
+            if updated_columns:
+                results.updated.append(existing_pool)
+            else:
+                results.unmodified.append(existing_pool)
         else:
             raise ValueError(f'Unexpected pool group sources: {pool_group}')
     return results
@@ -633,8 +659,8 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
     check_for_similar_names_in_different_groups(pools_grouped_by_distance)
     feed_unique_pools = [merge_pools(pool_group) for pool_group in pools_grouped_by_distance]
     for pool in feed_unique_pools:
-        regions = set(region_map.get(ctx.region, ctx.region) for ctx in pool.contexts)
-        if len(regions) != 1:
+        parents = set(ctx.parent_short_name for ctx in pool.contexts)
+        if len(parents) != 1:
             warnings.warn(f"Pool in multiple regions: {pool}", ScraperWarning)
 
     # Now cluster the unique pools in the feed with the pools in the tstore database.

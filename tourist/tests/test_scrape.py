@@ -105,42 +105,6 @@ def test_load_and_extract(test_app):
     assert extract.place_comment_id is None
 
 
-def test_extract_gbuwh_short(test_app):
-    add_uk(test_app)
-
-    with test_app.app_context():
-        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
-        feed = GbUwhFeed(
-            source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
-            clubs=[
-                GbUwhFeed.Club(
-                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg',
-                    region='North', website='https://foo.com',
-                    sessions=[
-                        GbUwhFeed.ClubSession(
-                            day='tuesday', latitude=53.45, longitude=-2.11,
-                            location_name='Denton', type='junior',
-                            title='Xarifa Juniors',
-                            start_time='19:00:00', end_time='20:00:00'),
-                        GbUwhFeed.ClubSession(
-                            day='thursday', latitude=53.47, longitude=-2.23,
-                            location_name='Manch', type='adult',
-                            title='Manchester session',
-                            start_time='21:00:00', end_time='22:00:00')
-                    ]),
-                ]
-        )
-        scrape.extract_gbfeed(uk, feed)
-
-    with test_app.app_context():
-        all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
-        assert set(all_pools.keys()) == {'Denton', 'Manch'}
-        assert tuple(one(all_pools['Denton'].entrance_shapely.coords)) == (-2.11, 53.45)
-
-        all_clubs: Mapping[str, tstore.Club] = {c.name: c for c in tstore.Club.query.all()}
-        assert set(all_clubs.keys()) == {'Xarifa UWH'}
-
-
 def test_group_distance():
     # latitude where each 0.01 degrees longitude is 1km
     magic_lat = 26.062468289
@@ -185,6 +149,66 @@ def add_uk(test_app):
         tstore.db.session.commit()
 
 
+def test_extract_gbuwh_short(test_app):
+    add_uk(test_app)
+
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        feed = GbUwhFeed(
+            source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
+            clubs=[
+                GbUwhFeed.Club(
+                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg',
+                    region='North', website='https://foo.com',
+                    sessions=[
+                        GbUwhFeed.ClubSession(
+                            day='tuesday', latitude=53.45, longitude=-2.11,
+                            location_name='Denton', type='junior',
+                            title='Xarifa Juniors',
+                            start_time='19:00:00', end_time='20:00:00'),
+                        GbUwhFeed.ClubSession(
+                            day='thursday', latitude=53.47, longitude=-2.23,
+                            location_name='Manch', type='adult',
+                            title='Manchester session',
+                            start_time='21:00:00', end_time='22:00:00')
+                    ]),
+            ]
+        )
+        scrape.extract_gbfeed(uk, feed)
+
+    with test_app.app_context():
+        all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
+        assert set(all_pools.keys()) == {'Denton', 'Manch'}
+        assert tuple(one(all_pools['Denton'].entrance_shapely.coords)) == (-2.11, 53.45)
+
+        all_clubs: Mapping[str, tstore.Club] = {c.name: c for c in tstore.Club.query.all()}
+        assert set(all_clubs.keys()) == {'Xarifa UWH'}
+
+
+def test_extract_gbuwh_wrong_region(test_app):
+    add_uk(test_app)
+
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        feed = GbUwhFeed(
+            source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
+            clubs=[
+                GbUwhFeed.Club(
+                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg',
+                    region='London', website='https://foo.com',
+                    sessions=[
+                        GbUwhFeed.ClubSession(
+                            day='thursday', latitude=53.4575, longitude=-2.114,
+                            location_name='Denton Wellness Center', type='adult',
+                            title='Manchester session',
+                            start_time='21:00:00', end_time='22:00:00')
+                    ]),
+            ]
+        )
+        with pytest.raises(scrape.PoolRegionChanged):
+            scrape.extract_gbfeed(uk, feed)
+
+
 def test_extract_gbuwh_long(test_app):
     add_uk(test_app)
 
@@ -196,7 +220,7 @@ def test_extract_gbuwh_long(test_app):
         uk_place = one(tstore.Place.query.filter_by(short_name='uk').all())
 
         with warnings.catch_warnings(record=True) as caught_warnings:
-            warnings.simplefilter("always")
+            warnings.filterwarnings("always", category=scrape.ScraperWarning)
             scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
 
     expected_categories = [scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,

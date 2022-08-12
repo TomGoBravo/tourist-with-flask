@@ -9,14 +9,25 @@ import shapely.wkt
 from flask.cli import AppGroup
 import click
 from tourist.models import tstore, attrib
-from shapely.geometry import mapping as shapely_mapping
 from geoalchemy2.shape import to_shape
 import attr
 from collections import defaultdict
-import json
 
 
 sync_cli = AppGroup('sync')
+
+
+def _geom_eq(old_value, new_value):
+    if old_value is None and new_value is None:
+        return True
+    if old_value is None or new_value is None:
+        return False
+    old_shape = to_shape(old_value)
+    new_shape = to_shape(new_value)
+    if old_shape == new_shape:
+        return True
+    else:
+        return False
 
 
 def sync_club(new_club: tstore.Club, old_club: tstore.Club, ignore_columns=Collection[str]) -> \
@@ -34,6 +45,22 @@ def sync_club(new_club: tstore.Club, old_club: tstore.Club, ignore_columns=Colle
             setattr(old_club, name, new_value)
             updated = True
     return updated, club_columns
+
+
+def sync_pool_objects(new_pool, old_pool, ignore_columns=('id', )) -> List[str]:
+    updated_columns = []
+    for col in tstore.Pool.__table__.columns:
+        name = col.name
+        if name in ignore_columns:
+            continue
+        old_value = getattr(old_pool, name)
+        new_value = getattr(new_pool, name)
+        if name == 'entrance' and _geom_eq(old_value, new_value):
+            continue
+        if old_value != new_value:
+            setattr(old_pool, name, new_value)
+            updated_columns.append(name)
+    return updated_columns
 
 
 @attr.s(auto_attribs=True)
@@ -80,19 +107,6 @@ class StaticSyncer:
             **a.sqlalchemy_kwargs()
         )
 
-    @staticmethod
-    def _geom_eq(old_value, new_value):
-        if old_value is None and new_value is None:
-            return True
-        if old_value is None or new_value is None:
-            return False
-        old_shape = to_shape(old_value)
-        new_shape = to_shape(new_value)
-        if old_shape == new_shape:
-            return True
-        else:
-            return False
-
     def update_entity(self, entity: attrib.Entity):
         if entity.type in ('place', 'world', 'country', 'division', 'town'):
             self.update_place(entity)
@@ -131,7 +145,7 @@ class StaticSyncer:
                 old_value = getattr(old_place, name)
                 new_value = getattr(new_place, name)
                 if name == 'region':
-                    if self._geom_eq(old_value, new_value):
+                    if _geom_eq(old_value, new_value):
                         continue
                     else:
                         if new_value:
@@ -153,22 +167,10 @@ class StaticSyncer:
         new_pool = self._new_pool(entity)
         if entity.short_name in self.short_name_to_pool:
             old_pool = self.short_name_to_pool[entity.short_name]
-            updated_columns = []
-            for col in tstore.Pool.__table__.columns:
-                name = col.name
-                if name in ('id', ):
-                    continue
-                old_value = getattr(old_pool, name)
-                new_value = getattr(new_pool, name)
-                if name == 'entrance' and self._geom_eq(old_value, new_value):
-                    continue
-                if old_value != new_value:
-                    setattr(old_pool, name, new_value)
-                    updated_columns.append(name)
+            updated_columns = sync_pool_objects(new_pool, old_pool)
             if updated_columns:
                 self.to_add.append(old_pool)
                 print(f'Updating {old_pool} fields {",".join(updated_columns)}')
-
         else:
             new_pool.id = len(self.short_name_to_pool)
             self.to_add.append(new_pool)
