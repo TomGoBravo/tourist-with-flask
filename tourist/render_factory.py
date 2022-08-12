@@ -16,10 +16,16 @@ from tourist.models import tstore
 
 # Hacky map from source short name to name to render on page. This seems better than keeping
 # something in the tstore database in-sync or having render_factory.py depend on scrape.py.
+# TODO(TomGoBravo): Find a good-enough way to pipe these values from the feed.
 SOURCE_NAMES = {
     "cuga-uwh": "CUGA where and when page",
     "sauwhf": "SA UWHF club list",
     "gbuwh-feed-clubs": "GBUWH",
+}
+
+SOURCE_LOGO_URL = {
+    "gbuwh-feed-clubs":
+        "https://www.gbuwh.co.uk/facelift/resources/img/british-octopush-association-logo.svg",
 }
 
 
@@ -40,6 +46,7 @@ def build_render_club(orm_club: tstore.Club) -> render.Club:
         status_date=orm_club.status_date,
         logo_url=orm_club.logo_url,
         source_name=SOURCE_NAMES.get(orm_club.source_short_name, None),
+        source_logo_url=SOURCE_LOGO_URL.get(orm_club.source_short_name, None),
     )
 
 

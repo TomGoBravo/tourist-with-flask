@@ -60,7 +60,10 @@
 </h3>
 
 {% if club.source_name %}<div class="mui--text-dark-secondary">Information provided by
-    {{club.source_name}}</div>{% endif -%}
+    {{club.source_name}}
+    {%- if club.source_logo_url %}<img src="{{club.source_logo_url}}" width="30" height="30">{%
+    endif -%}</div>
+{%- endif -%}
 {% if club.status_date -%}
 <div class="mui--text-subhead">{{ club.club_state.value }} ️as of {{ club.status_date |
     humanize_date_str }}</div>
