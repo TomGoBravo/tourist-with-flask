@@ -1,6 +1,7 @@
 import datetime
 from typing import Collection
 from typing import Dict, Iterable, List, Set
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
@@ -69,7 +70,7 @@ class StaticSyncer:
 
     This class does not communicate with the database.
     """
-    short_name_to_place: Dict[str, tstore.Place] = attr.ib(factory=lambda: {'': None})
+    short_name_to_place: Dict[str, tstore.Place] = attr.ib(factory=dict)
     short_name_to_club: Dict[str, tstore.Club] = attr.ib(factory=dict)
     short_name_to_pool: Dict[str, tstore.Pool] = attr.ib(factory=dict)
     to_add: List[tstore.Place] = attr.ib(factory=list)
@@ -86,23 +87,40 @@ class StaticSyncer:
     def add_existing_pool(self, pool: tstore.Pool):
         self.short_name_to_pool[pool.short_name] = pool
 
+    def _place_or_place_id_by_short_name(self, short_name) -> Tuple[Optional[tstore.Place],
+                                                                    Optional[int]]:
+        place = self.short_name_to_place[short_name]
+        if place.id is None:
+            # place is likely newly created. Return an instance. If place is stored then
+            # transient/detached objects that refer to place will also be stored by sqlalchemy
+            # cascading logic and most likely that is desired because they are all being imported
+            # and the database will assign ids for them.
+            return place, None
+        else:
+            # place is likely read from the database. Use the raw id as an attribute of a
+            # transient/detached object so sqlalchemy's cascading logic doesn't add it.
+            return None, place.id
+
     def _new_place(self, a: attrib.Entity):
-        parent = self.short_name_to_place[a.parent_short_name]
-        parent_id = parent and parent.id or None
+        if a.parent_short_name:
+            parent, parent_id = self._place_or_place_id_by_short_name(a.parent_short_name)
+        else:
+            assert a.short_name == 'world'
+            parent, parent_id = None, None
 
         return tstore.Place(
-            # id isn't set
+            parent=parent,
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
         )
 
     def _new_club(self, a: attrib.Entity):
         # Parent is always a place
-        parent = self.short_name_to_place[a.parent_short_name]
-        parent_id = parent and parent.id or None
+        parent, parent_id = self._place_or_place_id_by_short_name(a.parent_short_name)
 
         return tstore.Club(
             # id isn't set
+            parent=parent,
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
         )
@@ -124,7 +142,6 @@ class StaticSyncer:
             _, club_columns = sync_club(new_club, old_club, ignore_columns=('id',))
             self.club_columns.update(club_columns)
         else:
-            new_club.id = len(self.short_name_to_club)
             self.to_add.append(new_club)
             self.short_name_to_club[new_club.short_name] = new_club
 
@@ -159,7 +176,6 @@ class StaticSyncer:
             if updated:
                 self.to_add.append(old_place)
         else:
-            new_place.id = len(self.short_name_to_place)
             self.to_add.append(new_place)
             self.short_name_to_place[new_place.short_name] = new_place
 
@@ -172,17 +188,16 @@ class StaticSyncer:
                 self.to_add.append(old_pool)
                 print(f'Updating {old_pool} fields {",".join(updated_columns)}')
         else:
-            new_pool.id = len(self.short_name_to_pool)
             self.to_add.append(new_pool)
             self.short_name_to_pool[new_pool.short_name] = new_pool
 
     def _new_pool(self, a: attrib.Entity):
         # Parent is always a place
-        parent = self.short_name_to_place[a.parent_short_name]
-        parent_id = parent and parent.id or None
+        parent, parent_id = self._place_or_place_id_by_short_name(a.parent_short_name)
 
         return tstore.Pool(
             # id isn't set
+            parent=parent,
             parent_id=parent_id,
             **a.sqlalchemy_kwargs()
         )
