@@ -41,6 +41,8 @@ from sortedcontainers import SortedList
 import tourist.render_factory
 from tourist.models import sstore
 import attrs
+from pydantic.dataclasses import dataclass as pydantic_dataclass
+
 
 from tourist.models import tstore
 from tourist.scripts import sync
@@ -48,7 +50,7 @@ from tourist.scripts import sync
 scrape_cli = AppGroup('scrape')
 
 
-@attrs.frozen()
+@pydantic_dataclass(frozen=True)
 class Source:
     """Scraper source configuration"""
     short_name: str
@@ -114,7 +116,7 @@ class PoolFrozen:
     def _name_prefix_parts(self) -> Iterable[str]:
         return map(lambda w: re.sub(r'[\W_]', '', w)[0:3], self.name.lower().split()[0:3])
 
-    def sqlalchemy_kwargs(self) -> Dict[str, Any]:
+    def tstore_pool_kwargs(self) -> Dict[str, Any]:
         source_short_name = one(set(ctx.source_short_name for ctx in self.contexts))
         short_name = source_short_name + ''.join(self._name_prefix_parts())
         parent_id = one(set(ctx.parent_id for ctx in self.contexts))
@@ -129,19 +131,27 @@ class PoolFrozen:
         return kwargs
 
 
+def fetch_one(source: Source) -> sstore.UrlFetch:
+    response = requests.get(source.url)
+    if response.status_code != 200:
+        raise ValueError(f"Bad Response {source}, {response}")
+    return sstore.UrlFetch(
+        source_short_name=source.short_name, url=source.url, response=response.text)
+
+
+def add_url_fetch_to_session(session: sqlalchemy.orm.Session, new_fetch: sstore.UrlFetch):
+    prev_fetch = session.query(sstore.UrlFetch).filter_by(url=new_fetch.url).order_by(
+        sstore.UrlFetch.created_timestamp.desc()).first()
+    if prev_fetch and prev_fetch.response == new_fetch.response:
+        prev_fetch.unmodified_timestamp = datetime.utcnow()
+    else:
+        session.add(new_fetch)
+
+
 def fetch(session: sqlalchemy.orm.Session, sources: List[Source]):
     for source in sources:
-        response = requests.get(source.url)
-        if response.status_code != 200:
-            raise ValueError(f"Bad Response {source}, {response}")
-        prev_fetch = session.query(sstore.UrlFetch).filter_by(url=source.url).order_by(
-            sstore.UrlFetch.created_timestamp.desc()).first()
-        if prev_fetch and prev_fetch.response == response.text:
-            prev_fetch.unmodified_timestamp = datetime.utcnow()
-        else:
-            new_fetch = sstore.UrlFetch(source_short_name=source.short_name, url=source.url,
-                                        response=response.text)
-            session.add(new_fetch)
+        new_fetch = fetch_one(source)
+        add_url_fetch_to_session(session, new_fetch)
     session.commit()
 
 
@@ -546,7 +556,7 @@ class ClubSyncResults:
             f"to_add: {', '.join(c.name for c in self.to_add)}\n"
             f"to_del: {', '.join(c.name for c in self.to_del)}\n"
             f"updated: {', '.join(c.name for c in self.updated)}\n"
-            f"unmodified: {', '.join(c.name for c in self.unmodified)}\n")
+            f"unmodified count: {len(self.unmodified)}\n")
 
 
 def gbuwh_club_sync(old_clubs: Iterable[tstore.Club], new_clubs: Iterable[tstore.Club]) -> \
@@ -586,7 +596,7 @@ class PoolSyncResults:
             f"to_add: {', '.join(c.name for c in self.to_add)}\n"
             f"to_del: {', '.join(c.name for c in self.to_del)}\n"
             f"updated: {', '.join(c.name for c in self.updated)}\n"
-            f"unmodified: {', '.join(c.name for c in self.unmodified)}\n")
+            f"unmodified count: {len(self.unmodified)}\n")
 
 
 def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -> PoolSyncResults:
@@ -597,14 +607,13 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -
         if sources == ('tstore',):
             results.to_del.append(one(one(pool_group).contexts).tstore_pool)
         elif sources == (gbsource.short_name, ):
-            p: PoolFrozen = one(pool_group)
-            new_pool_args = p.sqlalchemy_kwargs()
-            new_pool = tstore.Pool(**new_pool_args)
+            feed_pool_frozen: PoolFrozen = one(pool_group)
+            new_pool = tstore.Pool(**feed_pool_frozen.tstore_pool_kwargs())
             results.to_add.append(new_pool)
         elif sources == (gbsource.short_name, 'tstore'):
             feed_pool_frozen, tstore_pool_frozen = pool_group
             existing_pool = one(tstore_pool_frozen.contexts).tstore_pool
-            new_pool = tstore.Pool(**feed_pool_frozen.sqlalchemy_kwargs())
+            new_pool = tstore.Pool(**feed_pool_frozen.tstore_pool_kwargs())
             updated_columns = sync.sync_pool_objects(new_pool=new_pool, old_pool=existing_pool,
                                                      ignore_columns=('id', 'short_name',
                                                                      'status_date', 'parent_id'))
@@ -661,7 +670,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
 
     # Now cluster the unique pools in the feed with the pools in the tstore database.
     orm_tstore_pools = list(place_searcher.get_all_pools())
-    # This call to `group_by_distance` is expected to returns groups with no more than one pool
+    # This call to `group_by_distance` is expected to return groups with no more than one pool
     # from feed_unique_pools and no more than one pool from orm_tstore_pools.
     grouped_union_of_pools = group_by_distance([*orm_tstore_pools, *feed_unique_pools], 200)
 
@@ -727,8 +736,7 @@ assert len(SOURCES) == len(SOURCE_BY_SHORT_NAME)
 assert set(SOURCE_BY_SHORT_NAME.keys()) == (tourist.render_factory.SOURCE_NAMES.keys())
 
 
-@scrape_cli.command('extract')
-def extract_command():
+def extract():
     session = make_session_from_flask_config()
     world_place = tstore.Place.query.filter_by(short_name='world').one()
     world_place_searcher = PlaceSearcher(world_place)
@@ -748,6 +756,11 @@ def extract_command():
                 session.add(extract)
         fetch.extract_timestamp = utc_now
     session.commit()
+
+
+@scrape_cli.command('extract')
+def extract_command():
+    extract()
 
 
 @attr.define
@@ -836,3 +849,10 @@ def extract_gbuwh(urlfetch_jsonl_path):
     url_fetch = converter.structure(json.loads(json_line), sstore.UrlFetch)
 
     parse_and_extract_gbfeed(uk_place, url_fetch)
+
+
+@scrape_cli.command('run-dataflow')
+def run_dataflow():
+    import tourist.scripts.dataflow
+    tourist.scripts.dataflow.run_fetch_and_sync()
+

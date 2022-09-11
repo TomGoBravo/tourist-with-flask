@@ -27,6 +27,8 @@ beautifulsoup4
 sortedcontainers
 geopy
 
+prefect
+
 # For testing:
 freezegun
 responses
