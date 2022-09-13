@@ -12,7 +12,7 @@ shapely
 flask-pagedown
 GeoAlchemy2
 polyline
-psycopg2
+psycopg2-binary
 uritemplate
 blinker
 flask-login

@@ -3,13 +3,15 @@ An implementation of the Underwater Hockey Tourist using Flask. See the live sit
 
 # Quickstart
 
-First install [pyenv](https://github.com/pyenv/pyenv). Don't miss [pyenv Common-build-problems](https://github.com/pyenv/pyenv/wiki/Common-build-problems). Then try the following which works in debian 9.0:
+First install [pyenv](https://github.com/pyenv/pyenv). Don't miss [pyenv Common-build-problems](https://github.com/pyenv/pyenv/wiki/Common-build-problems). Then try the following which works in debian 11:
 
 ```
-PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.7.2
-pyenv virtualenv 3.7.2 tourist-3.7.2
-pyenv activate tourist-3.7.2
-pip install -r requirements.txt
+PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.10.7
+pyenv virtualenv 3.10.7 tourist-3.10.7
+pyenv activate tourist-3.10.7
+python -m pip install pip==21.3  # Work around for https://github.com/jazzband/pip-tools/issues/1639
+python -m pip install pip-tools
+pip-sync
 
 # Run tests
 PYTHONPATH=. pytest tourist/tests/

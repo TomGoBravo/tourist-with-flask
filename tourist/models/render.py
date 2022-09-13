@@ -106,10 +106,10 @@ class PlaceRecursiveNames:
     name: str
     path: str
     area: float
-    child_clubs: List["PlaceRecursiveNames.Club"]
-    child_pools: List["PlaceRecursiveNames.Pool"]
-    child_pools_without_club_back_links: List["PlaceRecursiveNames.Pool"]
-    child_places: List["PlaceRecursiveNames"]
+    child_clubs: "List[PlaceRecursiveNames.Club]"
+    child_pools: "List[PlaceRecursiveNames.Pool]"
+    child_pools_without_club_back_links: "List[PlaceRecursiveNames.Pool]"
+    child_places: "List[PlaceRecursiveNames]"
     comment_count: int = attrs.field(default=0)
 
     @attrs.frozen()
@@ -121,15 +121,5 @@ class PlaceRecursiveNames:
         name: str
 
 
-# From https://github.com/python-attrs/cattrs/issues/13#issuecomment-624213402
-cattrs.register_structure_hook(
-    ForwardRef("PlaceRecursiveNames"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames),
-)
-cattrs.register_structure_hook(
-    ForwardRef("PlaceRecursiveNames.Club"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames.Club),
-)
-cattrs.register_structure_hook(
-    ForwardRef("PlaceRecursiveNames.Pool"), lambda d, t: cattrs.structure(d, PlaceRecursiveNames.Pool),
-)
 cattrs.register_structure_hook(datetime.datetime, lambda d, t: datetime.datetime.fromisoformat(d))
 cattrs.register_unstructure_hook(datetime.datetime, lambda d: d.isoformat())

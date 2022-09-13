@@ -325,7 +325,7 @@ class GbUwhFeed:
         unique_id: str
         name: str
         region: str
-        sessions: List['GbUwhFeed.ClubSession']
+        sessions: "List[GbUwhFeed.ClubSession]"
         logo: Optional[str] = None
         facebook: Optional[str] = None
         description: Optional[str] = None
@@ -347,10 +347,6 @@ class GbUwhFeed:
 
 
 gbuwhfeed_converter = cattrs.GenConverter(forbid_extra_keys=True)
-# I haven't looked into why ClubSession needs to be explicitly registered, but this makes it work.
-gbuwhfeed_converter.register_structure_hook(
-    ForwardRef("GbUwhFeed.ClubSession"), lambda d, t: gbuwhfeed_converter.structure(d, GbUwhFeed.ClubSession),
-)
 
 
 def get_source_context(club: GbUwhFeed.Club, session: GbUwhFeed.ClubSession, source: Source,
