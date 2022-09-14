@@ -9,7 +9,6 @@ from enum import Enum
 from enum import unique
 
 from typing import Dict
-from typing import ForwardRef
 from typing import List
 from typing import Optional
 

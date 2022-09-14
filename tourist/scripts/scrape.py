@@ -1,6 +1,7 @@
 import collections
 import itertools
 import json
+import logging
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -17,6 +18,7 @@ from typing import MutableMapping
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Type
 from urllib.parse import urlparse
 
 import attr
@@ -27,6 +29,7 @@ import flask
 import geoalchemy2.shape
 import geopy.point
 import geopy.distance
+import prefect
 import shapely.geometry
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
@@ -446,23 +449,39 @@ class PoolRegionChanged(ScraperError):
     pass
 
 
-def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch) -> List[
-    sstore.EntityExtract]:
+@attrs.frozen()
+class ProblemAccumulator:
+    logger: Optional[logging.Logger] = attrs.field(factory=prefect.get_run_logger)
+
+    def raise_(self, err: ScraperError):
+        raise err
+
+    def warn(self, msg: str, err_class: Type):
+        if self.logger:
+            self.logger.warning(msg)
+        else:
+            warnings.warn(msg, err_class)
+
+
+def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch, problems: Optional[
+    ProblemAccumulator] = None) -> List[sstore.EntityExtract]:
     fetch_json = json.loads(fetch.response)
     feed: GbUwhFeed = gbuwhfeed_converter.structure(fetch_json, GbUwhFeed)
-    return extract_gbfeed(uk_place, feed)
+    if not problems:
+        problems = ProblemAccumulator()
+    return extract_gbfeed(uk_place, feed, problems)
 
 
-def merge_pools(pool_group: List[PoolFrozen]) -> PoolFrozen:
+def merge_pools(pool_group: List[PoolFrozen], problems: ProblemAccumulator) -> PoolFrozen:
     if len(pool_group) == 1:
         return one(pool_group)
     furthest = max(pool_distances_m(pool_group))
     if furthest.meters > 10:
-        warnings.warn(f"Pools more than 10 meters apart: {furthest}", ScraperWarning)
+        problems.warn(f"Pools more than 10 meters apart: {furthest}", ScraperWarning)
     name_by_prefix = {p.name_prefix: p for p in pool_group}
     if len(name_by_prefix) > 1:
         names = ', '.join(f"'{pool.name}'" for pool in name_by_prefix.values())
-        warnings.warn(f"Nearby pools with different names: {names}", ScraperWarning)
+        problems.warn(f"Nearby pools with different names: {names}", ScraperWarning)
 
     combined_contexts = itertools.chain.from_iterable(pool.contexts for pool in pool_group)
 
@@ -501,7 +520,8 @@ def _format_title(session: GbUwhFeed.ClubSession) -> str:
 
 
 def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mapping[PoolFrozen, str],
-                     feed: GbUwhFeed, source: Source, place: tstore.Place) -> tstore.Club:
+                     feed: GbUwhFeed, source: Source, place: tstore.Place,
+                     problems: ProblemAccumulator) -> tstore.Club:
     """Returns a transient/detached tstore.Club from information in the feed."""
     markdown_lines = []
     if club.description:
@@ -512,7 +532,7 @@ def make_tstore_club(club: GbUwhFeed.Club, session_pool_to_pool_shortname: Mappi
         if link_str_value:
             parsed_url = urlparse(link_str_value)
             if parsed_url.scheme not in ("https", "http"):
-                warnings.warn(f"{link_attr} expected https but {club.name} contains "
+                problems.warn(f"{link_attr} expected https but {club.name} contains "
                               f"'{link_str_value}'", FeedContainsNonHttpsUrl)
                 continue
             markdown_lines.append(f"* <{link_str_value}>")
@@ -599,7 +619,8 @@ class PoolSyncResults:
             f"unmodified count: {len(self.unmodified)}\n")
 
 
-def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -> PoolSyncResults:
+def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]],
+                     problems: ProblemAccumulator) -> PoolSyncResults:
     results = PoolSyncResults()
     for pool_group in grouped_union_of_pools:
         pool_group.sort(key=lambda pool: one(pool.source_short_name))
@@ -620,9 +641,9 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -
             if new_pool.parent_id != existing_pool.parent_id:
                 new_parent_short_name = one(set(ctx.parent_short_name for ctx in
                                                 feed_pool_frozen.contexts))
-                raise PoolRegionChanged(f"Pool {existing_pool.name} region changed from "
+                problems.raise_(PoolRegionChanged(f"Pool {existing_pool.name} region changed from "
                                         f"{existing_pool.parent.short_name} to "
-                                        f"{new_parent_short_name}")
+                                        f"{new_parent_short_name}"))
             if updated_columns:
                 results.updated.append(existing_pool)
             else:
@@ -632,7 +653,8 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]]) -
     return results
 
 
-def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.EntityExtract]:
+def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, problems: ProblemAccumulator) -> List[
+    sstore.EntityExtract]:
     region_map = {"South West": "South", "South East": "South"}
     gbsource = SOURCE_BY_SHORT_NAME['gbuwh-feed-clubs']
     place_searcher = PlaceSearcher(uk_place)
@@ -647,7 +669,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
         place_name = region_map.get(region, region)
         region_place = place_searcher.find_by_name(place_name)
         if region_place is None:
-            warnings.warn(f"Region {region} mapped to place {place_name}, not found in tstore. "
+            problems.warn(f"Region {region} mapped to place {place_name}, not found in tstore. "
                           f"Add it manually. Contains clubs: {', '.join(c.name for c in clubs)}",
                           RegionNotFoundWarning)
             del clubs_by_region[region]
@@ -661,12 +683,13 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
     # Some pools are represented in the feed by slightly different coordinates and names. Cluster
     # them and look for mistakes.
     pools_grouped_by_distance = group_by_distance(pools_by_value.values(), 200)
-    check_for_similar_names_in_different_groups(pools_grouped_by_distance)
-    feed_unique_pools = [merge_pools(pool_group) for pool_group in pools_grouped_by_distance]
+    check_for_similar_names_in_different_groups(pools_grouped_by_distance, problems)
+    feed_unique_pools = [merge_pools(pool_group, problems) for pool_group in
+                         pools_grouped_by_distance]
     for pool in feed_unique_pools:
         parents = set(ctx.parent_short_name for ctx in pool.contexts)
         if len(parents) != 1:
-            warnings.warn(f"Pool in multiple regions: {pool}", ScraperWarning)
+            problems.warn(f"Pool in multiple regions: {pool}", ScraperWarning)
 
     # Now cluster the unique pools in the feed with the pools in the tstore database.
     orm_tstore_pools = list(place_searcher.get_all_pools())
@@ -675,7 +698,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
     grouped_union_of_pools = group_by_distance([*orm_tstore_pools, *feed_unique_pools], 200)
 
     # Add/delete/update the tstore database to be in sync with feed_unique_pools.
-    pool_sync = gbuwh_sync_pools(gbsource, grouped_union_of_pools)
+    pool_sync = gbuwh_sync_pools(gbsource, grouped_union_of_pools, problems)
     print(pool_sync.summary())
     tstore.db.session.add_all(pool_sync.to_add)
     for pool in pool_sync.to_del:
@@ -698,7 +721,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
         assert region_place is not None
         for club in clubs:
             new_tstore_clubs.append(make_tstore_club(club, session_pool_to_pool_shortname,
-                                                     feed, gbsource, region_place))
+                                                     feed, gbsource, region_place, problems))
     all_existing_clubs = list(place_searcher.get_all_clubs())
     club_sync = gbuwh_club_sync(old_clubs=all_existing_clubs, new_clubs=new_tstore_clubs)
     print(club_sync.summary())
@@ -710,14 +733,15 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed) -> List[sstore.Entit
     return []
 
 
-def check_for_similar_names_in_different_groups(pools_grouped_by_distance):
+def check_for_similar_names_in_different_groups(pools_grouped_by_distance, problems: ProblemAccumulator):
     name_prefix_to_pool = {}
     for pool_group in pools_grouped_by_distance:
         for pool in pool_group:
             if pool.name_prefix in name_prefix_to_pool:
                 other_pool = name_prefix_to_pool[pool.name_prefix]
                 pool_distance = one(pool_distances_m([pool, other_pool]))
-                raise ScraperError(f"Similar names in different distance groups: {pool_distance}")
+                problems.raise_(ScraperError(f"Similar names in different distance groups: "
+                                         f"{pool_distance}"))
         for pool in pool_group:
             name_prefix_to_pool[pool.name_prefix] = pool
 
@@ -851,8 +875,9 @@ def extract_gbuwh(urlfetch_jsonl_path):
     parse_and_extract_gbfeed(uk_place, url_fetch)
 
 
-@scrape_cli.command('run-dataflow')
-def run_dataflow():
+@scrape_cli.command('run-gb-dataflow')
+@click.option('--fetch-timestamp')
+def run_gb_dataflow(fetch_timestamp: str = None):
     import tourist.scripts.dataflow
-    tourist.scripts.dataflow.run_fetch_and_sync()
+    tourist.scripts.dataflow.run_gb_fetch_and_sync(fetch_timestamp=fetch_timestamp)
 

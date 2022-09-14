@@ -174,7 +174,7 @@ def test_extract_gbuwh_short(test_app):
                     ]),
             ]
         )
-        scrape.extract_gbfeed(uk, feed)
+        scrape.extract_gbfeed(uk, feed, scrape.ProblemAccumulator(logger=None))
 
     with test_app.app_context():
         all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
@@ -206,7 +206,7 @@ def test_extract_gbuwh_wrong_region(test_app):
             ]
         )
         with pytest.raises(scrape.PoolRegionChanged):
-            scrape.extract_gbfeed(uk, feed)
+            scrape.extract_gbfeed(uk, feed, scrape.ProblemAccumulator(logger=None))
 
 
 def test_extract_gbuwh_long(test_app):
@@ -221,7 +221,8 @@ def test_extract_gbuwh_long(test_app):
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.filterwarnings("always", category=scrape.ScraperWarning)
-            scrape.parse_and_extract_gbfeed(uk_place, url_fetch)
+            scrape.parse_and_extract_gbfeed(uk_place, url_fetch, scrape.ProblemAccumulator(
+                logger=None))
 
     expected_categories = [scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,
                            scrape.RegionNotFoundWarning, scrape.RegionNotFoundWarning,
