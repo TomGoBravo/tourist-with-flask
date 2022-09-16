@@ -158,7 +158,7 @@ jsonpointer==2.3
     # via jsonpatch
 kubernetes==24.2.0
     # via prefect
-mako==1.0.7
+mako==1.2.2
     # via alembic
 markdown==3.0.1
     # via flask-markdown
