@@ -9,12 +9,11 @@ Project and used original code Copyright [Waylan Limberg](http://achinghead.com/
 
 License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 '''
-import flask
 from markdown import Extension
 from markdown.inlinepatterns import InlineProcessor
 
 from tourist.models import tstore
-from markdown.util import etree
+import xml.etree.ElementTree as etree
 
 
 class WikiLinkExtension(Extension):

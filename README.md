@@ -14,7 +14,7 @@ python -m pip install pip-tools
 pip-sync
 
 # Run tests
-PYTHONPATH=. pytest tourist/tests/
+python -m pytest tourist/tests/
 
 # Setup a blank database
 cp tourist/tests/spatial_metadata.sqlite tourist.db
