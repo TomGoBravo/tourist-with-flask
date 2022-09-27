@@ -32,8 +32,8 @@ class BaseConfig:
 
 class ProductionConfig(BaseConfig):
     """ Production Environment Config """
-    LOG_DIR = '/var/local/www-data'
-    DATA_DIR = pathlib.Path('/var/local/www-data')
+    LOG_DIR = '/data'
+    DATA_DIR = pathlib.Path('/data')
     LOG_LEVEL = logging.INFO
 
 

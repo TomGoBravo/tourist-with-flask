@@ -1,0 +1,32 @@
+services:
+  uwsgi:
+    build: .
+    image: tomgobravo/tourist-with-flask:tourist-docker
+    command: uwsgi --strict --need-app --ini /app/uwsgi.ini
+    environment:
+      FLASK_ENV: "production"
+    volumes:
+      - /var/local/www-data:/data
+      # Run as the host www-data by replacing the container passwd and group files.
+      # Within the container the uid on files will now map to names from the host (if any)
+      # but that's okay because the container filesystem can be treated as readonly; uwsgi
+      # only needs to write to /data, which is mounted from the host filesystem.
+      # https://pawitp.medium.com/syncing-host-and-container-users-in-docker-39337eff0094
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+    user: "www-data:www-data"
+    # This container doesn't really need anything else running to start so a
+    # systemd configuration like
+    # https://www.jetbrains.com/help/youtrack/server/run-docker-container-as-service.html
+    # isn't needed.
+    restart: unless-stopped
+  flaskdebugrun:
+    build: .
+    command: flask run
+    environment:
+      FLASK_ENV: "development"
+      FLASK_RUN_HOST: "0.0.0.0"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./dev-data:/data
