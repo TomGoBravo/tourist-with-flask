@@ -3,6 +3,7 @@ import pathlib
 import tourist.scripts.dataflow
 import tourist.config
 from prefect.deployments import Deployment
+from prefect.filesystems import LocalFileSystem
 
 dev_data_path = pathlib.Path(__file__).parent.parent.parent / "dev-data"
 
@@ -22,5 +23,6 @@ run_gb_deployment_production = Deployment.build_from_flow(
     name="run_gb_fetch_and_sync_production",
     infra_overrides={"env.FLASK_ENV": "production"},
     work_queue_name="production",
+    storage=LocalFileSystem(basepath="/var/local/www-data/tourist-prefect-agent/deployment/run_gb_fetch_and_sync_production"),
 )
 run_gb_deployment_production.apply()
