@@ -27,6 +27,7 @@ RUN apt-get clean autoclean
 # copy the app to the image
 COPY uwsgi.ini /app
 COPY tourist /app/tourist
+RUN chmod --recursive a+r /app
 
 ENV FLASK_APP=tourist
 ENV DATA_DIR=/data

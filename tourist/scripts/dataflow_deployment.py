@@ -11,6 +11,7 @@ Deployment.build_from_flow(
     infra_overrides={"env.DATA_DIR": "/data",
                      "env.FLASK_ENV": "development"},
     work_queue_name="development",
+    path='/app',
 ).apply()
 
 
@@ -20,5 +21,5 @@ Deployment.build_from_flow(
     infra_overrides={"env.DATA_DIR": "/data",
                      "env.FLASK_ENV": "production"},
     work_queue_name="production",
-    storage=None,
+    path='/app',
 ).apply()
