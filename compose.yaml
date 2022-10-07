@@ -13,6 +13,7 @@ services:
       # but that's okay because the container filesystem can be treated as readonly; uwsgi
       # only needs to write to /data, which is mounted from the host filesystem.
       # https://pawitp.medium.com/syncing-host-and-container-users-in-docker-39337eff0094
+      # The service prefectagentproduction does the same.
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
     user: "www-data:www-data"
@@ -20,6 +21,20 @@ services:
     # systemd configuration like
     # https://www.jetbrains.com/help/youtrack/server/run-docker-container-as-service.html
     # isn't needed.
+    restart: unless-stopped
+  prefectagentproduction:
+    build: .
+    image: tomgobravo/tourist-with-flask:tourist-docker
+    command: prefect agent start -q production
+    environment:
+      PREFECT_HOME: "/prefect_home"
+    volumes:
+      - /var/local/www-data/tourist-prefect-agent/.prefect:/prefect_home
+      - /var/local/www-data:/data
+      # See comment about users in service uwsgi.
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+    user: "www-data:www-data"
     restart: unless-stopped
   flaskdebugrun:
     build: .
@@ -31,3 +46,21 @@ services:
       - "5000:5000"
     volumes:
       - ./dev-data:/data
+      - ./tourist:/app/tourist
+  prefectagentdevelopment:
+    build: .
+    image: tomgobravo/tourist-with-flask:tourist-docker
+    command: prefect agent start -q development
+    network_mode: host
+    environment:
+      PREFECT_API_URL: "http://127.0.0.1:4200/api"
+    volumes:
+      - ./dev-data:/data
+      - ./tourist:/app/tourist
+  prefectoriondevelopment:
+    build: .
+    image: tomgobravo/tourist-with-flask:tourist-docker
+    command: prefect orion start
+    # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
+    # default is reachable from a browser on the host and by prefectagentdevelopment.
+    network_mode: host
