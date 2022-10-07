@@ -7,6 +7,7 @@ services:
       FLASK_ENV: "production"
     volumes:
       - /var/local/www-data:/data
+      - ./tourist/secrets.cfg:/app/tourist/secrets.cfg
       # Run as the host www-data by replacing the container passwd and group files.
       # Within the container the uid on files will now map to names from the host (if any)
       # but that's okay because the container filesystem can be treated as readonly; uwsgi
