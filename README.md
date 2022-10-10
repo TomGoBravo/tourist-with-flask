@@ -1,7 +1,18 @@
 # tourist-with-flask
 An implementation of the Underwater Hockey Tourist using Flask. See the live site at https://pucku.org/tourist/.
 
-# Quickstart
+# Quickstart with docker
+
+Install docker on your machine.
+
+Checkout git repo https://github.com/TomGoBravo/tourist-with-flask.git
+
+Change into the directory containing `compose.yaml`.
+
+Run `docker compose -f compose.yaml up flaskdebugrun` to start the server locally.
+
+
+# Starting with flask running in a local venv
 
 First install [pyenv](https://github.com/pyenv/pyenv). Don't miss [pyenv Common-build-problems](https://github.com/pyenv/pyenv/wiki/Common-build-problems). Then try the following which works in debian 11:
 
