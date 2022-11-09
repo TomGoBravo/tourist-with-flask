@@ -13,7 +13,7 @@ To run a development frontend:
 * Change into the directory containing `compose.yaml`.
 * Run `docker compose -f compose.yaml up flaskdebugrun` to start a container running flask on
   your machine.
-* Go to <http://127.0.0.1:5000/tourist>.
+* Go to <http://127.0.0.1:5001/tourist>.
 * Modify the files you checked out from github in the `tourist/` directory. The docker
   container mounts this directory on your host machine inside the container. Depending on the
   change you may need to restart `flaskdebugrun` to see your change.
