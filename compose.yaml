@@ -42,8 +42,11 @@ services:
     environment:
       FLASK_ENV: "development"
       FLASK_RUN_HOST: "0.0.0.0"
+      # The default port, 5000, conflicts with an MacOS service so listen to 5001 instead. See
+      # https://twissmueller.medium.com/resolving-the-problem-of-port-5000-already-being-in-use-dd2fe4bad0be
+      FLASK_RUN_PORT: "5001"
     ports:
-      - "5000:5000"
+      - "5001:5001"
     volumes:
       - ./dev-data:/data
       - ./tourist:/app/tourist
