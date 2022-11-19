@@ -49,7 +49,7 @@ services:
       - "5001:5001"
     volumes:
       - ./dev-data:/data
-      - ./tourist:/app/tourist
+#      - ./tourist:/app/tourist
   prefectagentdevelopment:
     build: .
     image: tomgobravo/tourist-with-flask:tourist-docker
