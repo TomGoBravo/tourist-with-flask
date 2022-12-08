@@ -45,7 +45,7 @@ cachetools==5.2.0
     # via google-auth
 cattrs==22.1.0
     # via -r requirements.in
-certifi==2018.11.29
+certifi==2022.12.7
     # via
     #   httpcore
     #   httpx
@@ -77,8 +77,6 @@ cryptography==37.0.4
     # via prefect
 docker==5.0.3
     # via prefect
-exceptiongroup==1.0.0rc9
-    # via cattrs
 fastapi==0.79.0
     # via prefect
 flask==2.0.2
