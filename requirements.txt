@@ -77,8 +77,6 @@ cryptography==37.0.4
     # via prefect
 docker==5.0.3
     # via prefect
-exceptiongroup==1.0.0rc9
-    # via cattrs
 fastapi==0.79.0
     # via prefect
 flask==2.0.2
@@ -338,7 +336,7 @@ werkzeug==2.0.3
     #   flask
     #   flask-dance
     #   flask-login
-wheel==0.37.1
+wheel==0.38.1
     # via
     #   pip-tools
     #   readchar
