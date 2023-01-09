@@ -7,8 +7,8 @@ def test_production(monkeypatch):
     app = flask.Flask('testflask')
     app.config.from_object(tourist.config.by_env[app.env])
 
-    assert app.config["SQLALCHEMY_DATABASE_URI"] == 'sqlite:////var/local/www-data/tourist.db'
-    assert app.config["LOG_DIR"] == '/var/local/www-data'
+    assert app.config["SQLALCHEMY_DATABASE_URI"] == 'sqlite:////data/tourist.db'
+    assert app.config["LOG_DIR"] == '/data'
     assert app.config["SECRET_KEY"] == '87294798798799'
     assert not app.config["TESTING"]
     assert not app.config["DEBUG"]
