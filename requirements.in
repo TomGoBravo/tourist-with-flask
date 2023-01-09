@@ -1,3 +1,10 @@
+# Source file for requirements.txt
+#
+# I'm using https://github.com/jazzband/pip-tools to manage these files.
+#
+# To upgrade packages in requirements.txt run something like:
+# pip-compile --upgrade-package certifi --upgrade-package cattrs
+
 attrs
 cattrs
 git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-geoatileattributionurl#egg=Flask-Admin
