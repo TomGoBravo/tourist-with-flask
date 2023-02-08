@@ -73,12 +73,10 @@ coolname==1.1.0
     # via prefect
 croniter==1.3.5
     # via prefect
-cryptography==39.0.0
+cryptography==39.0.1
     # via prefect
 docker==5.0.3
     # via prefect
-exceptiongroup==1.0.0rc9
-    # via cattrs
 fastapi==0.79.0
     # via prefect
 flask==2.0.2
