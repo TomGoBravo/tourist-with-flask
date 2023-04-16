@@ -14,7 +14,15 @@ import flask_pagedown.fields
 pagedown = flask_pagedown.PageDown()
 
 
-class TouristAdminBaseModelView(geoa.ModelView):
+class IsEditUserMixin:
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.edit_granted
+
+    def inaccessible_callback(self, name, **kwargs):
+        return tourist.inaccessible_response()
+
+
+class TouristAdminBaseModelView(IsEditUserMixin, geoa.ModelView):
     column_filters = ['parent_id', 'name', 'short_name']
     form_overrides = dict(markdown=flask_pagedown.fields.PageDownField)
     form_widget_args = {'markdown': {'rows': 6, 'style': 'width: 500px'}}
@@ -29,12 +37,6 @@ class TouristAdminBaseModelView(geoa.ModelView):
     # form.js pre-pends '//' so start the URL with the hostname.
     tile_layer_url = 'api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
     tile_layer_attribution = '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
-
-    def is_accessible(self):
-        return current_user.is_authenticated and current_user.edit_granted
-
-    def inaccessible_callback(self, name, **kwargs):
-        return tourist.inaccessible_response()
 
     def create_form(self):
         form = super(TouristAdminBaseModelView, self).create_form()
@@ -57,7 +59,7 @@ class PoolAdminModelView(TouristAdminBaseModelView):
     column_list = ['name', 'short_name', 'entrance', 'markdown', 'parent']
 
 
-class CommentAdminModelView(SQLAModelView):
+class CommentAdminModelView(IsEditUserMixin, SQLAModelView):
     pass
 
 
