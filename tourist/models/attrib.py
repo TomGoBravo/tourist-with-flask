@@ -4,7 +4,6 @@ import attr
 import json
 
 from geoalchemy2.shape import from_shape
-from shapely.geometry import asShape
 from shapely.geometry.geo import shape
 from shapely.geometry.geo import mapping
 import geojson
@@ -73,10 +72,10 @@ class Entity:
             kwargs['geoname_id'] = self.geonames_id
         if self.region:
             assert self.type == 'place'
-            kwargs['region'] = from_shape(asShape(self.region), srid=4326)
+            kwargs['region'] = from_shape(shape(self.region), srid=4326)
         if self.point:
             assert self.type == 'pool'
-            kwargs['entrance'] = from_shape(asShape(self.point), srid=4326)
+            kwargs['entrance'] = from_shape(shape(self.point), srid=4326)
         return kwargs
 
     def sqlalchemy_kwargs_with_ids(self):
