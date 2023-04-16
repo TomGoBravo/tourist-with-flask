@@ -7,6 +7,7 @@ from typing import Sequence
 
 import attr
 import click.testing
+import flask
 import pytest
 import responses
 import sqlalchemy.exc
@@ -14,6 +15,7 @@ from freezegun import freeze_time
 from geoalchemy2 import WKTElement
 from more_itertools import one
 
+import tourist
 from tourist.models import sstore
 from tourist.models import tstore
 from tourist.scripts import scrape
@@ -73,14 +75,13 @@ def test_fetch():
 
 @attr.define
 class ScrapeRunner():
-    data_dir: pathlib.Path
-    cli_runner: click.testing.CliRunner = attr.ib(factory=lambda: click.testing.CliRunner(
-        mix_stderr=False))
+    app: flask.Flask
 
     def invoke_scrape(self, args: Sequence[str]) -> click.testing.Result:
-        env = {'FLASK_ENV': 'development', 'FLASK_APP': 'tourist', 'DATA_DIR': str(self.data_dir)}
-        result = self.cli_runner.invoke(scrape.scrape_cli, args,
-                                        env=env, catch_exceptions=False)
+        data_dir = self.app.config['DATA_DIR']
+        cli_runner = self.app.test_cli_runner(mix_stderr=False)
+        env = {'TOURIST_ENV': 'development', 'FLASK_APP': 'tourist', 'DATA_DIR': str(data_dir)}
+        result = cli_runner.invoke(scrape.scrape_cli, args, env=env, catch_exceptions=False)
         print(result.stdout)
         print(result.stderr)
         assert result.exit_code == 0
@@ -88,7 +89,7 @@ class ScrapeRunner():
 
 
 def test_load_and_extract(test_app):
-    runner = ScrapeRunner(test_app.config['DATA_DIR'])
+    runner = ScrapeRunner(test_app)
     add_canada(test_app)
     jsonl_path = path_relative('url-fetch-20220308T232323.jsonl')
 
@@ -250,7 +251,7 @@ def add_canada(test_app):
 
 
 def test_load_and_comment(test_app):
-    runner = ScrapeRunner(test_app.config['DATA_DIR'])
+    runner = ScrapeRunner(test_app)
     add_canada(test_app)
     jsonl_path = path_relative('entity-extract-20220309T021642.jsonl')
     runner.invoke_scrape(['load', f'--entity-extract-json-path={str(jsonl_path)}'])

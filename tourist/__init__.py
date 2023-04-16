@@ -55,7 +55,7 @@ def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
     app = flask.Flask(__name__)
 
     if config_object is None:
-        config_object = tourist.config.by_env[app.env]
+        config_object = tourist.config.by_env(flask_debug=app.debug)
     app.config.from_object(config_object)
 
     if os.path.isfile('tourist/secrets.cfg'):
