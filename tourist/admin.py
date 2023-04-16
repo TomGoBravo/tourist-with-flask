@@ -2,6 +2,7 @@ import flask
 import flask_admin
 from flask import url_for, redirect, request, current_app
 from flask_admin.contrib import geoa
+from flask_admin.contrib.sqla import ModelView as SQLAModelView
 from flask_login import current_user
 from wtforms import fields, widgets
 
@@ -56,7 +57,13 @@ class PoolAdminModelView(TouristAdminBaseModelView):
     column_list = ['name', 'short_name', 'entrance', 'markdown', 'parent']
 
 
+class CommentAdminModelView(SQLAModelView):
+    pass
+
+
 admin_views = flask_admin.Admin(base_template='my_master.html', template_mode="bootstrap4")
 admin_views.add_view(PlaceAdminModelView(tstore.Place, tstore.db.session, name='Place', endpoint='place'))
 admin_views.add_view(ClubAdminModelView(tstore.Club, tstore.db.session, name='Club', endpoint='club'))
 admin_views.add_view(PoolAdminModelView(tstore.Pool, tstore.db.session, name='Pool', endpoint='pool'))
+admin_views.add_view(CommentAdminModelView(tstore.PlaceComment, tstore.db.session, name='Comment',
+                                           endpoint='comment'))
