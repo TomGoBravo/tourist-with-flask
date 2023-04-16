@@ -22,7 +22,7 @@ tourist_bp = Blueprint('tourist_bp', __name__)
 
 
 def mapbox_access_token():
-    return tstore.db.get_app().config['MAPBOX_ACCESS_TOKEN']
+    return flask.current_app.config['MAPBOX_ACCESS_TOKEN']
 
 
 # Render routes
