@@ -4,7 +4,7 @@ services:
     image: tomgobravo/tourist-with-flask:tourist-docker
     command: uwsgi --strict --need-app --ini /app/uwsgi.ini
     environment:
-      FLASK_ENV: "production"
+      TOURIST_ENV: "production"
     volumes:
       - /var/local/www-data:/data
       - ./tourist/secrets.cfg:/app/tourist/secrets.cfg
@@ -38,9 +38,9 @@ services:
     restart: unless-stopped
   flaskdebugrun:
     build: .
-    command: flask run
+    command: flask --debug run
     environment:
-      FLASK_ENV: "development"
+      TOURIST_ENV: "development"
       FLASK_RUN_HOST: "0.0.0.0"
       # The default port, 5000, conflicts with an MacOS service so listen to 5001 instead. See
       # https://twissmueller.medium.com/resolving-the-problem-of-port-5000-already-being-in-use-dd2fe4bad0be

@@ -45,6 +45,10 @@ def test_heavy(test_app):
         ))
         assert response.status_code == 403
 
+        response = c.get('/admin/comment/')
+        assert response.status_code == 403
+
+
     with test_app.app_context():
         new_au = tstore.Place.query.filter_by(short_name='au').first()
         assert new_au.name == 'Australia'
@@ -67,6 +71,10 @@ def test_heavy(test_app):
             short_name=au.short_name,
         ))
         assert response.status_code == 302
+
+        response = c.get('/admin/comment/')
+        assert response.status_code == 200
+        assert b'Sign out' in response.data
 
     with test_app.app_context():
         new_au = tstore.Place.query.filter_by(short_name='au').one()
