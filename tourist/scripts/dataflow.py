@@ -24,8 +24,7 @@ def run_fetch(source: scrape.Source):
 
 @flow(task_runner=SequentialTaskRunner())
 def run_gb_fetch_and_sync(fetch_timestamp: Optional[str] = None):
-    config = tourist.config.by_env[os.getenv('FLASK_ENV')]
-    app = tourist.create_app(config)
+    app = tourist.create_app()
 
     with app.app_context():
         logger = prefect.get_run_logger()

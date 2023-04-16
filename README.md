@@ -60,5 +60,5 @@ cp tourist/tests/spatial_metadata.sqlite tourist.db
 FLASK_APP=tourist flask sync import_jsonl tourist/tests/testentities.jsonl
 
 # Start dev server
-FLASK_ENV=development FLASK_APP=tourist flask run
+FLASK_APP=tourist flask --debug run
 ```

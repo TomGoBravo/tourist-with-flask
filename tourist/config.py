@@ -30,14 +30,14 @@ class BaseConfig:
         return f'sqlite:///{str(self.DATA_DIR)}/scraper.db'
 
 
-class ProductionConfig(BaseConfig):
+class _ProductionConfig(BaseConfig):
     """ Production Environment Config """
     LOG_DIR = '/data'
     DATA_DIR = pathlib.Path('/data')
     LOG_LEVEL = logging.INFO
 
 
-class DevelopmentConfig(BaseConfig):
+class _DevelopmentConfig(BaseConfig):
     """ Dev Environment Config """
     LOG_LEVEL = logging.DEBUG
     EXPLAIN_TEMPLATE_LOADING = False  # This is pretty noisy when enabled.
@@ -60,15 +60,24 @@ class DevelopmentConfig(BaseConfig):
         return path
 
 
-def make_test_config(tmp_path: pathlib.Path) -> DevelopmentConfig:
-    class TestConfig(DevelopmentConfig):
+def make_test_config(tmp_path: pathlib.Path) -> BaseConfig:
+    class TestConfig(_DevelopmentConfig):
         DATA_DIR = tmp_path
         TESTING = True
         ALLOW_UNAUTHENTICATED_ADMIN = False
     return TestConfig()
 
 
-by_env = {
-    'production': ProductionConfig(),
-    'development': DevelopmentConfig(),
+_by_env = {
+    'production': _ProductionConfig(),
+    'development': _DevelopmentConfig(),
 }
+
+
+def by_env(*, flask_debug: bool) -> BaseConfig:
+    """Returns config object based on env TOURIST_ENV or passed flask.debug if that isn't set."""
+    if flask_debug:
+        default = 'development'
+    else:
+        default = 'production'
+    return _by_env[os.getenv('TOURIST_ENV', default=default)]
