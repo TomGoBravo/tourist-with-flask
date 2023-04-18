@@ -25,8 +25,6 @@ RUN chmod --recursive a+r /app
 # RUN apt-get purge --yes gcc && apt-get autoremove --yes && apt-get clean autoclean
 
 ENV FLASK_APP=tourist
-ENV DATA_DIR=/data
-ENV LOG_DIR=/data
 
 # Entry CMD is set by the compose.yaml service command.
 
