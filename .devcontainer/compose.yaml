@@ -1,6 +1,9 @@
+# Github codespaces does not appear to use this file, but it may be useful for running devcontainers
+# locally.
+
 services:
   flaskdebugrun:
-    image: tomgobravo/tourist-with-flask:tourist-docker
+    image: tomgobravo/tourist-builder:latest
     working_dir: /workspace/tourist-with-flask
     command: flask --debug run
     environment:
@@ -27,7 +30,7 @@ services:
 # Add prefectagentdev when I've worked out how to have it share data with the flaskdebugrun
 #  prefectagentdev:
 #    build: .
-#    image: tomgobravo/tourist-with-flask:tourist-docker
+#    image: tomgobravo/tourist-builder:latest
 #    command: prefect agent start -q development
 #    network_mode: host
 #    environment:
@@ -39,7 +42,7 @@ services:
 # prefectoriondev removed to simplify devcontainer for now.
 #  prefectoriondev:
 #    build: .
-#    image: tomgobravo/tourist-with-flask:tourist-docker
+#    image: tomgobravo/tourist-builder:latest
 #    command: prefect orion start
 #    # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
 #    # default is reachable from a browser on the host and by prefectagentdevelopment.

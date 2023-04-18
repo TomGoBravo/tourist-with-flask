@@ -1,4 +1,4 @@
 {
-    "image": "tomgobravo/tourist-with-flask:tourist-docker",
+    "image": "tomgobravo/tourist-builder:latest",
     "onCreateCommand": "./.devcontainer/setup-dev-data.sh"
 }
