@@ -1,0 +1,42 @@
+services:
+  flaskdebugrun:
+    image: tomgobravo/tourist-with-flask:tourist-docker
+    working_dir: /app
+    command: flask --debug run
+    environment:
+      PYTHONPATH: "/app"
+      TOURIST_ENV: "development"
+      FLASK_RUN_HOST: "0.0.0.0"
+      # The default port, 5000, conflicts with an MacOS service so listen to 5001 instead. See
+      # https://twissmueller.medium.com/resolving-the-problem-of-port-5000-already-being-in-use-dd2fe4bad0be
+      FLASK_RUN_PORT: "5001"
+      FLASK_APP: "tourist"
+    ports:
+      - "5001:5001"
+
+# volumes: commented out because the source and data come from somewhere else in the devcontainer
+# setup
+#    volumes:
+#      - ./dev-data:/data
+#      - ./tourist:/app/tourist
+
+# Add prefectagentdev when I've worked out how to have it share data with the flaskdebugrun
+#  prefectagentdev:
+#    build: .
+#    image: tomgobravo/tourist-with-flask:tourist-docker
+#    command: prefect agent start -q development
+#    network_mode: host
+#    environment:
+#      PREFECT_API_URL: "http://127.0.0.1:4200/api"
+#    volumes:
+#      - ./dev-data:/data
+#      - ./tourist:/app/tourist
+
+# prefectoriondev removed to simplify devcontainer for now.
+#  prefectoriondev:
+#    build: .
+#    image: tomgobravo/tourist-with-flask:tourist-docker
+#    command: prefect orion start
+#    # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
+#    # default is reachable from a browser on the host and by prefectagentdevelopment.
+#    network_mode: host

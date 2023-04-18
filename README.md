@@ -53,11 +53,7 @@ pip-sync
 # Run tests
 python -m pytest tourist/tests/
 
-# Setup a blank database
-cp tourist/tests/spatial_metadata.sqlite tourist.db
-
-# Import JSON lines file. Get from old system or in the test directory.
-FLASK_APP=tourist flask sync import_jsonl tourist/tests/testentities.jsonl
+./.devcontainer/setup-dev-data.sh
 
 # Start dev server
 FLASK_APP=tourist flask --debug run
