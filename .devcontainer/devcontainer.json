@@ -1,4 +1,4 @@
 {
     "image": "tomgobravo/tourist-with-flask:tourist-docker",
-    "onCreateCommand": "cd tourist-with-flask && ../.devcontainer/setup-dev-data.sh"
+    "onCreateCommand": "./.devcontainer/setup-dev-data.sh"
 }
