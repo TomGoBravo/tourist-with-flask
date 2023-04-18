@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir dev-data
 mkdir logs
 
