@@ -4,15 +4,27 @@ An implementation of the Underwater Hockey Tourist using Flask. See the live sit
 This page is for people who are interested in changing the code that runs the hockey tourist.
 If you'd like to improve our list of clubs please read <https://pucku.org/tourist/about>.
 
+
+## Run your own instance in the cloud
+
+You can now run and modify your own instance entirely in the cloud! When logged into github go
+to https://github.com/TomGoBravo/tourist-with-flask/ and look for the green `<> Code` button.
+Click on it, then `Create codespace`. After about 20 seconds there should be terminal with a prompt
+that looks like `root@codespaces-60d6e9:/workspaces/tourist-with-flask# `. Run `flask --debug 
+run`, then look for the green `Open in browser` button. When that opens you are connected to 
+your own private instance of the tourist. Explore and modify the source in the left panel, this 
+is a safe place to experiment.
+
+
 ## Run a local frontend in a docker container
 
-If you want to run the frontend without changing any dependencies, for example to modify the
-HTML or Javascript or make small changes to the Python code, it is probably easiest to run it in
-container with the production release image.
+If you can't use codespace to run an instance in the cloud, you can run the same container on 
+your local machine.
 
 To run a development frontend:
 * Install docker on your machine.
 * Checkout git repo <https://github.com/TomGoBravo/tourist-with-flask>.
+* Following instructions need repairs after codespaces were setup...
 * Change into the directory containing `compose.yaml`.
 * Run `docker compose -f compose.yaml up flaskdebugrun` to start a container running flask on
   your machine.
