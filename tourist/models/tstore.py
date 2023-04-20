@@ -425,6 +425,11 @@ class PlaceComment(db.Model, EntityChild):
     content_markdown = db.Column(db.String, nullable=True, default=None)
     place_id = db.Column(db.Integer, db.ForeignKey(Place.id))
 
+    remote_addr = db.Column(db.String, nullable=True, default=None)
+    user_agent = db.Column(db.String, nullable=True, default=None)
+    # From python-akismet SpamStatus: 0 - Not spam, 1 - Unknown, 2 - ProbableSpam, 3 - DefiniteSpam
+    akismet_spam_status = db.Column(db.Integer, nullable=True, default=None)
+
     place = db.relationship("Place", back_populates="comments")
 
 
