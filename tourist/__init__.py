@@ -13,6 +13,7 @@ import jinja2
 import markdown
 import markdown.extensions.wikilinks
 from flask import current_app
+from werkzeug.middleware.profiler import ProfilerMiddleware
 
 import tourist.models.tstore
 from tourist import render_factory
@@ -71,6 +72,9 @@ def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
 
     flask_md = Markdown(app)
     flask_md.register_extension(WikiLinkExtension, {})
+
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app,
+                                      profile_dir='/home/thecap/code/tourist-with-flask/logs/profile')
 
     from tourist.models.tstore import db
     db.init_app(app)
