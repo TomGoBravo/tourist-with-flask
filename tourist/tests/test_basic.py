@@ -3,7 +3,9 @@ from pprint import pprint
 
 import pytest
 from geoalchemy2 import WKTElement
+from more_itertools import one
 from pytest import approx
+from pytest_mock import MockerFixture
 
 import tourist.models.render
 from tourist import render_factory
@@ -502,22 +504,30 @@ def test_attrib_dump():
     assert e.dump_as_jsons() == expected_output
 
 
-def test_add_delete_place_comment(test_app):
+def test_add_delete_place_comment(test_app, mocker: MockerFixture):
     add_some_entities(test_app)
     user = add_and_return_edit_granted_user(test_app)
     place_id = 3
+    # I'm not a big fan of mocker because it silently ignores calling a method that doesn't exist from a test but
+    # don't know a more solid solution that is well-supported today.
+    mocker.patch('tourist.get_comment_spam_status')
+    tourist.get_comment_spam_status.return_value = 2
 
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
         assert 'There are comments' not in response.get_data(as_text=True)
+        tourist.get_comment_spam_status.assert_not_called()
 
         response = c.post(f'/tourist/add/place_comment/{place_id}',
                           data=dict(content="test content"))
         assert response.status_code == 302
         assert response.location.endswith('/tourist/place/metro')
+        tourist.get_comment_spam_status.assert_called_once()
+        tourist.get_comment_spam_status.reset_mock()
 
         response = c.get('/tourist/place/metro')
         assert 'There are comments' in response.get_data(as_text=True)
+        tourist.get_comment_spam_status.assert_not_called()
 
     with test_app.test_client(user=user) as c:
         response = c.get('/tourist/place/metro')
@@ -530,10 +540,11 @@ def test_add_delete_place_comment(test_app):
     # Check that deleting the place deletes the comment.
     with test_app.app_context():
         place = tstore.Place.query.get(place_id)
-        assert len(place.comments) == 1
-        assert place.comments[0].source == "Web visitor at 127.0.0.1"
-        assert 0 <= (datetime.datetime.utcnow() - place.comments[0].timestamp).total_seconds() <= 10
-        comment_id = place.comments[0].id
+        comment: tstore.PlaceComment = one(place.comments)
+        assert comment.source == "Web visitor at 127.0.0.1"
+        assert comment.akismet_spam_status == 2
+        assert 0 <= (datetime.datetime.utcnow() - comment.timestamp).total_seconds() <= 10
+        comment_id = comment.id
         assert tstore.PlaceComment.query.get(comment_id)
         # child_pools and child_clubs are not deleted by cascade. Delete them explicitly.
         tstore.db.session.delete(place.child_pools[0])

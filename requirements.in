@@ -40,3 +40,4 @@ prefect
 # For testing:
 freezegun
 responses
+pytest-mock
