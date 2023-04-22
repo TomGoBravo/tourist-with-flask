@@ -13,8 +13,10 @@ import attr
 import click
 import sqlalchemy_continuum
 from flask.cli import AppGroup
+import flask
 from more_itertools import last
 
+import tourist
 from tourist import render_factory
 from tourist.models import attrib
 from tourist.models import tstore
@@ -88,6 +90,23 @@ def replace_club_pool_links(write):
         replacements += sub_count
 
     click.echo(f'Replacing {replacements} links in {", ".join(modified_clubs)}')
+
+    if write:
+        click.echo('Committing changes')
+        tstore.db.session.commit()
+    else:
+        click.echo('Run with --write to commit changes')
+
+
+@batchtool_cli.command('check-comment-spam')
+@click.option('--write', is_flag=True)
+def check_comment_spam(write: bool):
+    comment: tstore.PlaceComment
+    for comment in tstore.PlaceComment.query.filter_by(akismet_spam_status=None).limit(50):
+
+        if comment.akismet_spam_status is None and comment.content:
+            comment.akismet_spam_status = tourist.get_comment_spam_status(comment)
+            click.echo(f"{comment}: {comment.akismet_spam_status}")
 
     if write:
         click.echo('Committing changes')

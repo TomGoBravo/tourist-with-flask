@@ -227,6 +227,12 @@ pygments==2.12.0
 pyparsing==3.0.6
     # via packaging
 pytest==7.1.3
+    # via
+    #   -r requirements.in
+    #   pytest-mock
+pytest-mock==3.10.0
+    # via -r requirements.in
+python-akismet==0.4.3
     # via -r requirements.in
 python-dateutil==2.8.0
     # via
@@ -253,6 +259,7 @@ requests==2.27.1
     #   docker
     #   flask-dance
     #   kubernetes
+    #   python-akismet
     #   requests-oauthlib
     #   responses
 requests-oauthlib==1.3.0

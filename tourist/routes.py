@@ -9,6 +9,7 @@ import flask
 import flask_login
 import sqlalchemy_continuum
 import wtforms.validators
+from akismet import Akismet
 from flask import render_template, Blueprint, redirect, url_for
 from flask_admin.contrib.geoa.fields import GeoJSONField
 from sqlalchemy_continuum import transaction_class
@@ -158,11 +159,15 @@ def add_place_comment(place_id):
     place = tstore.Place.query.get_or_404(place_id)
     content = flask.request.form['content'].strip()
     if content:
+        request = flask.request
         place_comment = tstore.PlaceComment(
-            source=f"Web visitor at {flask.request.remote_addr}",
+            source=f"Web visitor at {request.remote_addr}",
             content=content,
-            place=place
+            place=place,
+            remote_addr=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
         )
+        place_comment.akismet_spam_status = tourist.get_comment_spam_status(place_comment)
         tstore.db.session.add(place_comment)
         tstore.db.session.commit()
         flask.flash(f"Comment added to {place.name}")

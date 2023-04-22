@@ -26,6 +26,7 @@ flask-login
 flask_dance
 sqlalchemy
 pytest
+python-akismet
 pip-tools
 humanize  # To format times
 more-itertools
@@ -39,3 +40,4 @@ prefect
 # For testing:
 freezegun
 responses
+pytest-mock
