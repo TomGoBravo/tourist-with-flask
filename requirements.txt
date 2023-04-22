@@ -228,6 +228,8 @@ pyparsing==3.0.6
     # via packaging
 pytest==7.1.3
     # via -r requirements.in
+python-akismet==0.4.3
+    # via -r requirements.in
 python-dateutil==2.8.0
     # via
     #   croniter
@@ -253,6 +255,7 @@ requests==2.27.1
     #   docker
     #   flask-dance
     #   kubernetes
+    #   python-akismet
     #   requests-oauthlib
     #   responses
 requests-oauthlib==1.3.0
