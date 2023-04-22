@@ -52,7 +52,7 @@ class PlaceAdminModelView(TouristAdminBaseModelView):
 
 
 class ClubAdminModelView(TouristAdminBaseModelView):
-    column_list = ['name', 'short_name', 'markdown', 'parent']
+    column_list = ['name', 'short_name', 'markdown', 'parent', 'status_date']
 
 
 class PoolAdminModelView(TouristAdminBaseModelView):
@@ -60,7 +60,9 @@ class PoolAdminModelView(TouristAdminBaseModelView):
 
 
 class CommentAdminModelView(IsEditUserMixin, SQLAModelView):
-    pass
+    column_filters = ['source']
+    fast_mass_delete = True
+    can_set_page_size = True
 
 
 admin_views = flask_admin.Admin(base_template='my_master.html', template_mode="bootstrap4")
