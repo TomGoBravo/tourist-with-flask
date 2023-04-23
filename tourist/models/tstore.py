@@ -410,11 +410,13 @@ class JSONEncodedDict(TypeDecorator):
         return value
 
 
-class RenderCache(db.Model):
-    name = db.Column(db.String, primary_key=True, nullable=False, unique=True,
-                     sqlite_on_conflict_primary_key='REPLACE')
-    value_str = db.Column(db.String)
-    value_dict = db.Column(JSONEncodedDict)
+class Source(db.Model, EntityChild):
+    """A data source. Instances of in this table are closely related to `Source` constants in `scripts/scrape.py`."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    logo_url = db.Column(db.String)
+    source_short_name = db.Column(db.String, nullable=False, unique=True)
+    sync_timestamp = db.Column(db.DateTime(), nullable=True)
 
 
 class PlaceComment(db.Model, EntityChild):
@@ -431,6 +433,18 @@ class PlaceComment(db.Model, EntityChild):
     akismet_spam_status = db.Column(db.Integer, nullable=True, default=None)
 
     place = db.relationship("Place", back_populates="comments")
+
+
+class RenderCache(db.Model):
+    """A key-value store that caches data derived from other tables and passed to HTML templates.
+
+    The value_dict contains JSON representations of structures in models/render.py. It'd make sense to store this
+    in its owne key-value store, separate from tstore but I haven't set that up.
+    """
+    name = db.Column(db.String, primary_key=True, nullable=False, unique=True,
+                     sqlite_on_conflict_primary_key='REPLACE')
+    value_str = db.Column(db.String)
+    value_dict = db.Column(JSONEncodedDict)
 
 
 sqlalchemy.orm.configure_mappers()

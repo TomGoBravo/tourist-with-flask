@@ -66,6 +66,7 @@ def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
     app.config.from_envvar('TOURIST_CONFIG_FILE', silent=True)
     app.jinja_options["undefined"] = jinja2.Undefined
     app.jinja_env.filters['humanize_date_str'] = humanize_date_str
+    app.jinja_env.filters['humanize_datetime'] = lambda dt: humanize.naturaltime(dt)
 
     initialise_logger(app)
     app.logger.info(f'{__name__} starting up :)')
