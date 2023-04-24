@@ -23,6 +23,13 @@ class ClubState(Enum):
 
 
 @attrs.frozen()
+class ClubSource:
+    name: str
+    logo_url: str
+    sync_timestamp: datetime.datetime
+
+
+@attrs.frozen()
 class Club:
     id: int
     name: str
@@ -30,8 +37,7 @@ class Club:
     markdown: str
     status_date: Optional[str]
     logo_url: Optional[str] = None
-    source_name: Optional[str] = None
-    source_logo_url: Optional[str] = None
+    source: Optional[ClubSource] = None
 
     @property
     def club_state(self) -> ClubState:

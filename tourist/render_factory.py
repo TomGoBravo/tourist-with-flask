@@ -1,7 +1,7 @@
 import csv
 import enum
 import io
-from typing import List
+from typing import List, Mapping
 
 from sqlalchemy.util import IdentitySet
 
@@ -14,21 +14,6 @@ from tourist.models import render
 from tourist.models import tstore
 
 
-# Hacky map from source short name to name to render on page. This seems better than keeping
-# something in the tstore database in-sync or having render_factory.py depend on scrape.py.
-# TODO(TomGoBravo): Find a good-enough way to pipe these values from the feed.
-SOURCE_NAMES = {
-    "cuga-uwh": "CUGA where and when page",
-    "sauwhf": "SA UWHF club list",
-    "gbuwh-feed-clubs": "GBUWH",
-}
-
-SOURCE_LOGO_URL = {
-    "gbuwh-feed-clubs":
-        "https://www.gbuwh.co.uk/facelift/resources/img/british-octopush-association-logo.svg",
-}
-
-
 @enum.unique
 class RenderName(enum.Enum):
     PLACE_PREFIX = "/place/"
@@ -37,7 +22,16 @@ class RenderName(enum.Enum):
     POOLS_GEOJSON = "/pools.geojson"
 
 
-def build_render_club(orm_club: tstore.Club) -> render.Club:
+def _build_render_club_source(orm_source: tstore.Source) -> render.ClubSource:
+    return render.ClubSource(
+        name=orm_source.name,
+        logo_url=orm_source.logo_url,
+        sync_timestamp=orm_source.sync_timestamp,
+    )
+
+
+def _build_render_club(orm_club: tstore.Club, source_by_short_name: Mapping[str, render.ClubSource]) -> render.Club:
+    source = source_by_short_name.get(orm_club.source_short_name, None)
     return render.Club(
         id=orm_club.id,
         name=orm_club.name,
@@ -45,12 +39,11 @@ def build_render_club(orm_club: tstore.Club) -> render.Club:
         markdown=orm_club.markdown,
         status_date=orm_club.status_date,
         logo_url=orm_club.logo_url,
-        source_name=SOURCE_NAMES.get(orm_club.source_short_name, None),
-        source_logo_url=SOURCE_LOGO_URL.get(orm_club.source_short_name, None),
+        source=source,
     )
 
 
-def build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
+def _build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
     club_back_links = [render.ClubShortNameName(short_name=c.short_name, name=c.name)
                        for c in orm_pool.club_back_links]
 
@@ -64,15 +57,15 @@ def build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
     )
 
 
-def build_render_place(orm_place: tstore.Place) -> render.Place:
+def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[str, render.ClubSource]) -> render.Place:
     children_geojson = orm_place.children_geojson_features
     if children_geojson:
         geojson_children_collection = geojson.FeatureCollection(children_geojson)
     else:
         geojson_children_collection = {}
 
-    child_clubs = [build_render_club(c) for c in orm_place.child_clubs]
-    child_pools = [build_render_pool(p) for p in orm_place.child_pools]
+    child_clubs = [_build_render_club(c, source_by_short_name) for c in orm_place.child_clubs]
+    child_pools = [_build_render_pool(p) for p in orm_place.child_pools]
     child_places = [render.ChildPlace(p.path, p.name) for p in orm_place.child_places]
     comments = [render.PlaceComment(id=c.id, timestamp=c.timestamp, content=c.content,
                                     content_markdown=c.content_markdown,
@@ -110,8 +103,9 @@ def build_render_place(orm_place: tstore.Place) -> render.Place:
     )
 
 
-def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiveNames:
-    child_places = [build_place_recursive_names(p) for p in orm_place.child_places]
+def _build_place_recursive_names(orm_place: tstore.Place) \
+        -> render.PlaceRecursiveNames:
+    child_places = [_build_place_recursive_names(p) for p in orm_place.child_places]
     child_clubs = [render.PlaceRecursiveNames.Club(c.name) for c in orm_place.child_clubs]
     pools_with_links = list(p for p in orm_place.child_pools if bool(p.club_back_links))
     pools_without_links = list(p for p in orm_place.child_pools if not bool(p.club_back_links))
@@ -131,6 +125,16 @@ def build_place_recursive_names(orm_place: tstore.Place) -> render.PlaceRecursiv
     )
 
 
+def _build_geojson_feature_collection(all_places, all_pools):
+    geojson_features = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
+    for p in all_places:
+        if p.child_places or p.child_pools:
+            continue
+        geojson_features.append(p.center_geojson_feature)
+    geojson_feature_collection = geojson.FeatureCollection(geojson_features)
+    return geojson_feature_collection
+
+
 def yield_cache():
     def get_all(cls):
         all_objects = IdentitySet(cls.query.all()) | tstore.db.session.dirty | tstore.db.session.new
@@ -140,13 +144,15 @@ def yield_cache():
     all_places: List[tstore.Place] = get_all(tstore.Place)
     all_clubs: List[tstore.Club] = get_all(tstore.Club)
     all_pools: List[tstore.Pool] = get_all(tstore.Pool)
+    all_sources: List[tstore.Source] = get_all(tstore.Source)
+    source_by_short_name = {s.source_short_name: _build_render_club_source(s) for s in all_sources}
 
     for place in all_places:
-        render_place = build_render_place(place)
+        render_place = _build_render_place(place, source_by_short_name)
         yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
                                      value_dict=cattrs.unstructure(render_place))
         if place.short_name == 'world':
-            render_names_world = build_place_recursive_names(place)
+            render_names_world = _build_place_recursive_names(place)
             yield tstore.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
                                          value_dict=attrs.asdict(
                                              render_names_world))
@@ -171,16 +177,6 @@ def yield_cache():
     for pool in all_pools:
         cw.writerow(attrs.asdict(pool.as_attrib_entity()))
     yield tstore.RenderCache(name=RenderName.CSV_ALL.value, value_str=si.getvalue())
-
-
-def _build_geojson_feature_collection(all_places, all_pools):
-    geojson_features = [p.entrance_geojson_feature for p in all_pools if p.entrance_geojson_feature]
-    for p in all_places:
-        if p.child_places or p.child_pools:
-            continue
-        geojson_features.append(p.center_geojson_feature)
-    geojson_feature_collection = geojson.FeatureCollection(geojson_features)
-    return geojson_feature_collection
 
 
 def get_place(short_name: str) -> render.Place:

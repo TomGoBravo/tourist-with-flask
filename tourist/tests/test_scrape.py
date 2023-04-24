@@ -1,5 +1,6 @@
 import json
 import pathlib
+import re
 import warnings
 from datetime import datetime
 from typing import Mapping
@@ -175,7 +176,8 @@ def test_extract_gbuwh_short(test_app):
                     ]),
             ]
         )
-        scrape.extract_gbfeed(uk, feed, scrape.ProblemAccumulator(logger=None))
+        fetch_timestamp = datetime(2022, 12, 25)
+        scrape.extract_gbfeed(uk, feed, fetch_timestamp, scrape.ProblemAccumulator(logger=None))
 
     with test_app.app_context():
         all_pools: Mapping[str, tstore.Pool] = {p.name: p for p in tstore.Pool.query.all()}
@@ -184,6 +186,26 @@ def test_extract_gbuwh_short(test_app):
 
         all_clubs: Mapping[str, tstore.Club] = {c.name: c for c in tstore.Club.query.all()}
         assert set(all_clubs.keys()) == {'Xarifa UWH'}
+
+        source: tstore.Source = one(tstore.Source.query.all())
+        assert source.source_short_name == 'gbuwh-feed-clubs'
+        assert source.sync_timestamp == fetch_timestamp
+
+    # Check that running extract_gbfeed again updates tstore.Source.sync_timestamp
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        next_fetch_timestamp = datetime(2022, 12, 26)
+        scrape.extract_gbfeed(uk, feed, next_fetch_timestamp, scrape.ProblemAccumulator(logger=None))
+        updated_source: tstore.Source = one(tstore.Source.query.all())
+        assert updated_source.id == source.id
+        assert updated_source.sync_timestamp == next_fetch_timestamp
+
+    with test_app.test_client() as c:
+        with freeze_time(datetime.fromisoformat("2022-12-26T12:00:00")):
+            response = c.get('/tourist/place/uknorth')
+            response_text = response.get_data(as_text=True)
+            source_text = re.search(r'provided by\s+GBUWH[^>]+>12 hours ago', response_text).group()
+            assert source_text
 
 
 def test_extract_gbuwh_wrong_region(test_app):
@@ -207,7 +229,7 @@ def test_extract_gbuwh_wrong_region(test_app):
             ]
         )
         with pytest.raises(scrape.PoolRegionChanged):
-            scrape.extract_gbfeed(uk, feed, scrape.ProblemAccumulator(logger=None))
+            scrape.extract_gbfeed(uk, feed, datetime(2022, 12, 25),  scrape.ProblemAccumulator(logger=None))
 
 
 def test_extract_gbuwh_long(test_app):

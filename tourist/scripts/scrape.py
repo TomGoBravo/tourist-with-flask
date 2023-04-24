@@ -469,7 +469,7 @@ def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch, pro
     feed: GbUwhFeed = gbuwhfeed_converter.structure(fetch_json, GbUwhFeed)
     if not problems:
         problems = ProblemAccumulator()
-    return extract_gbfeed(uk_place, feed, problems)
+    return extract_gbfeed(uk_place, feed, fetch.unmodified_timestamp, problems)
 
 
 def merge_pools(pool_group: List[PoolFrozen], problems: ProblemAccumulator) -> PoolFrozen:
@@ -653,8 +653,8 @@ def gbuwh_sync_pools(gbsource, grouped_union_of_pools: List[List[PoolFrozen]],
     return results
 
 
-def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, problems: ProblemAccumulator) -> List[
-    sstore.EntityExtract]:
+def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, fetch_timestamp: datetime, problems: ProblemAccumulator) \
+        -> List[sstore.EntityExtract]:
     region_map = {"South West": "South", "South East": "South"}
     gbsource = SOURCE_BY_SHORT_NAME['gbuwh-feed-clubs']
     place_searcher = PlaceSearcher(uk_place)
@@ -728,9 +728,25 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, problems: ProblemAcc
     tstore.db.session.add_all(club_sync.to_add)
     for club in club_sync.to_del:
         tstore.db.session.delete(club)
+
+    tstore_source = _get_or_add_tstore_source('gbuwh-feed-clubs')
+    tstore_source.sync_timestamp = fetch_timestamp
+    tstore_source.name = feed.source.name
+    tstore_source.logo_url = feed.source.icon
+
     tstore.db.session.commit()
 
     return []
+
+
+def _get_or_add_tstore_source(source_short_name: str) -> tstore.Source:
+    results = tstore.Source.query.filter_by(source_short_name='gbuwh-feed-clubs').all()
+    if results:
+        return one(results)
+    else:
+        new_source = tstore.Source(source_short_name=source_short_name)
+        tstore.db.session.add(new_source)
+        return new_source
 
 
 def check_for_similar_names_in_different_groups(pools_grouped_by_distance, problems: ProblemAccumulator):
@@ -746,6 +762,7 @@ def check_for_similar_names_in_different_groups(pools_grouped_by_distance, probl
             name_prefix_to_pool[pool.name_prefix] = pool
 
 
+# Source values in SOURCES are closely related to rows in the tstore.Source table.
 SOURCES = [
     Source("cuga-uwh", "http://cuga.org/en/where-and-when-uwh/", "ca", extract_cuga),
     Source("sauwhf", "https://sauwhf.co.za/clubs/", "za", extract_sauwhf),
@@ -757,7 +774,6 @@ SOURCE_BY_SHORT_NAME = {source.short_name: source for source in SOURCES}
 # SOURCES could be an enum, but I'd rather have it in a representation that is closer to being
 # stored as data instead of in the source code.
 assert len(SOURCES) == len(SOURCE_BY_SHORT_NAME)
-assert set(SOURCE_BY_SHORT_NAME.keys()) == (tourist.render_factory.SOURCE_NAMES.keys())
 
 
 def extract():
@@ -872,7 +888,7 @@ def extract_gbuwh(urlfetch_jsonl_path):
     json_line = one(open(urlfetch_jsonl_path).readlines())
     url_fetch = converter.structure(json.loads(json_line), sstore.UrlFetch)
 
-    parse_and_extract_gbfeed(uk_place, url_fetch)
+    parse_and_extract_gbfeed(uk_place, url_fetch, problems=ProblemAccumulator(logger=None))
 
 
 @scrape_cli.command('run-gb-dataflow')
