@@ -31,7 +31,7 @@ jobs:
         id: meta_production
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/tourist-with-flask-production
+          images: ${{ env.REGISTRY }}/tourist-production
 
       - name: Build and push production Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
@@ -45,7 +45,7 @@ jobs:
         id: meta_builder
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/tourist-with-flask-builder
+          images: ${{ env.REGISTRY }}/tourist-builder
 
       - name: Build and push builder Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4

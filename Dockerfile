@@ -1,6 +1,9 @@
 # Inspired by https://blog.logrocket.com/build-deploy-flask-app-using-docker/ and https://medium.com/swlh/flask-docker-the-basics-66a699aa1e7d
 # and https://github.com/microsoft/vscode-dev-containers/issues/304#issue-608331752 (for builder and production multi-stage docker images)
 
+# From https://docs.github.com/en/enterprise-server@3.8/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+LABEL org.opencontainers.image.source=https://github.com/TomGoBravo/tourist-with-flask
+
 # start by pulling the python image
 FROM python:3.10.7-buster AS builder
 
