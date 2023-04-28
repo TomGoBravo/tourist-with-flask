@@ -26,8 +26,6 @@ from freezegun import freeze_time
 
 
 def test_heavy(test_app):
-    assert False
-
     # Exercise the code that imports from Entity objects parsed from JSON.
     with test_app.app_context():
         importer = sync.Importer()
