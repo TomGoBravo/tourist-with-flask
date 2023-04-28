@@ -27,30 +27,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for production Docker
-        id: meta_production
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      - name: Build and push builder Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          images: ${{ env.REGISTRY }}/tomgobravo/tourist-production
+          context: .
+          push: true
+          target: builder
+          tags: ${{ env.REGISTRY }}/tomgobravo/tourist-builder:main
+
+      # Run tests before pushing tourist-production:latest. Based on
+      # https://docs.docker.com/build/ci/github-actions/test-before-push/
+      - name: Run tests
+        run: |
+          docker run --rm -w /app ${{ env.REGISTRY }}/tomgobravo/tourist-builder:main python -m pytest tourist/tests
 
       - name: Build and push production Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
           push: true
-          tags: ${{ steps.meta_production.outputs.tags }}
-          labels: ${{ steps.meta_production.outputs.labels }}
-
-      - name: Extract metadata (tags, labels) for builder Docker
-        id: meta_builder
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: ${{ env.REGISTRY }}/tomgobravo/tourist-builder
-
-      - name: Build and push builder Docker image
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta_builder.outputs.tags }}
-          labels: ${{ steps.meta_builder.outputs.labels }}
+          target: production
+          tags: ${{ env.REGISTRY }}/tomgobravo/tourist-production:latest
