@@ -10,7 +10,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push-image:
+  build-test-and-push-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,7 +37,7 @@ jobs:
 
       # Run tests before pushing tourist-production:latest. Based on
       # https://docs.docker.com/build/ci/github-actions/test-before-push/
-      - name: Run tests
+      - name: Run tests in builder Docker image
         run: |
           docker run --rm -w /app ${{ env.REGISTRY }}/tomgobravo/tourist-builder:main python -m pytest tourist/tests
 
