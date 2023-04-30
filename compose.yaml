@@ -1,7 +1,7 @@
 services:
   uwsgi:
     build: .
-    image: tomgobravo/tourist-production:latest
+    image: ghcr.io/tomgobravo/tourist-production:latest
     command: uwsgi --strict --need-app --ini /app/uwsgi.ini
     volumes:
       - /var/local/www-data:/data
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
   prefectagentproduction:
     build: .
-    image: tomgobravo/tourist-production:latest
+    image: ghcr.io/tomgobravo/tourist-production:latest
     command: prefect agent start -q production
     environment:
       PREFECT_HOME: "/prefect_home"

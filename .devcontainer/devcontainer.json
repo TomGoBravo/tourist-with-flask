@@ -1,4 +1,4 @@
 {
-    "image": "tomgobravo/tourist-builder:latest",
+    "image": "ghcr.io/tomgobravo/tourist-builder:main",
     "onCreateCommand": "./.devcontainer/setup-dev-data.sh"
 }
