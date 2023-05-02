@@ -23,5 +23,14 @@ def add_comment_spam_fields(db_file_path: str):
     con.close()
 
 
+@cli.command()
+@click.argument('db_file_path')
+def add_source_place_id(db_file_path: str):
+    con = sqlite3.connect(db_file_path)
+    with con:
+        con.execute("ALTER TABLE source ADD place_id INTEGER")
+    con.close()
+
+
 if __name__ == '__main__':
     cli()

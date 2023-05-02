@@ -207,6 +207,13 @@ def test_extract_gbuwh_short(test_app):
             source_text = re.search(r'provided by\s+GBUWH[^>]+>12 hours ago', response_text).group()
             assert source_text
 
+            response = c.get('/tourist/')
+            response_text = response.get_data(as_text=True)
+            print(response_text)
+            source_text = re.search(r'GBUWH updated [^>]+>United Kingdom[^>]+>\s+12 hours ago', response_text,
+                                    flags=re.MULTILINE).group()
+            assert source_text
+
 
 def test_extract_gbuwh_wrong_region(test_app):
     add_uk(test_app)
