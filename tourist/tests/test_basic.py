@@ -1,6 +1,7 @@
 import datetime
 from pprint import pprint
 
+import flask
 import pytest
 from geoalchemy2 import WKTElement
 from more_itertools import one
@@ -292,22 +293,24 @@ def test_delete_club(test_app):
         response = c.get('/tourist/delete/club/1')
         assert response.status_code == 302  # Without login
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
         response = c.get('/tourist/delete/club/1')
         assert response.status_code == 200
+        print(response.get_data(as_text=True))
         assert 'Foo Club' in response.get_data(as_text=True)
 
         # Post without the `confirm` checkbox set.
-        response = c.post(f'/tourist/delete/club/1', data=dict(csrf_token=c.csrf_token))
+        response = c.post(f'/tourist/delete/club/1', data=dict(csrf_token=flask.g.csrf_token))
         assert response.status_code == 200
 
     # Check that delete didn't happen
     with test_app.app_context():
         assert tstore.Club.query.filter_by(short_name='shortie').count() == 1
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
+        c.get('/tourist/delete/club/1')  # GET to create the CSRF token
         response = c.post(f'/tourist/delete/club/1', data=dict(confirm=True,
-                                                               csrf_token=c.csrf_token))
+                                                               csrf_token=flask.g.csrf_token))
         assert response.status_code == 302
         assert response.location.endswith('/tourist/place/metro')
 
@@ -329,21 +332,23 @@ def test_delete_place(test_app):
         response = c.get('/tourist/place/cc')
         assert "Metro" in response.get_data(as_text=True)
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
         response = c.get('/tourist/delete/place/2')
         assert response.status_code == 200
         assert 'can not be deleted' in response.get_data(as_text=True)
 
-        response = c.post(f'/tourist/delete/place/3', data=dict(csrf_token=c.csrf_token))
+        c.get('/tourist/delete/place/3')  # GET to create the CSRF token
+        response = c.post(f'/tourist/delete/place/3', data=dict(csrf_token=flask.g.csrf_token))
         assert response.status_code == 200
 
     # Check that delete didn't happen because `confirm` was not set
     with test_app.app_context():
         assert tstore.Club.query.filter_by(short_name='shortie').count() == 1
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
+        c.get('/tourist/delete/place/3')  # GET to create the CSRF token
         response = c.post(f'/tourist/delete/place/3', data=dict(confirm=True,
-                                                             csrf_token=c.csrf_token))
+                                                             csrf_token=flask.g.csrf_token))
         assert response.status_code == 302
         assert response.location.endswith('/tourist/place/cc')
 
@@ -366,14 +371,14 @@ def test_delete_pool(test_app):
         response = c.get('/tourist/delete/pool/1')
         assert response.status_code == 302  # Without login
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
         response = c.get('/tourist/delete/pool/1')
         assert response.status_code == 200
         assert 'can not be deleted' in response.get_data(as_text=True)
 
         with pytest.raises(ValueError, match="club_back_links"):
             c.post(f'/tourist/delete/pool/1', data=dict(confirm=True,
-                                                                    csrf_token=c.csrf_token))
+                                                                    csrf_token=flask.g.csrf_token))
 
     # Check that delete didn't happen
     with test_app.app_context():
@@ -383,9 +388,10 @@ def test_delete_pool(test_app):
         tstore.db.session.add(club)
         tstore.db.session.commit()
 
-    with test_app.test_client(user=user) as c:
+    with test_app.app_context(), test_app.test_client(user=user) as c:
+        c.get('/tourist/delete/pool/1')  # GET to create the CSRF token
         response = c.post(f'/tourist/delete/pool/1', data=dict(confirm=True,
-                                                               csrf_token=c.csrf_token))
+                                                               csrf_token=flask.g.csrf_token))
         assert response.status_code == 302
         assert response.location.endswith('/tourist/place/metro')
 
