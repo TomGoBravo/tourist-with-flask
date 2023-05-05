@@ -4,28 +4,19 @@
 services:
   flaskdebugrun:
     image: tomgobravo/tourist-builder:latest
-    working_dir: /workspace/tourist-with-flask
+    working_dir: /workspaces/tourist-with-flask
     command: flask --debug run
     environment:
-      PYTHONPATH: "/workspace/tourist-with-flask"
-      TOURIST_ENV: "development"
       FLASK_RUN_HOST: "0.0.0.0"
       # The default port, 5000, conflicts with an MacOS service so listen to 5001 instead. See
       # https://twissmueller.medium.com/resolving-the-problem-of-port-5000-already-being-in-use-dd2fe4bad0be
       FLASK_RUN_PORT: "5001"
-      FLASK_APP: "tourist"
-      DATA_DIR:
-      LOG_DIR:
     ports:
       - "5001:5001"
-
-# volumes: commented out because the source and data come from somewhere else in the devcontainer
-# setup
-#    volumes:
-#      - ./dev-data:/data
-#      - ./tourist:/app/tourist
-#      # For debugging devcontainer workspace when running locally
-#      - .../tourist-with-flask:/workspace/tourist-with-flask
+    volumes:
+      # Mount the parent directory at the same path as github codespaces. When
+      # TOURIST_ENV=workspace config.py uses this for the data and logs.
+      - ../.:/workspaces/tourist-with-flask
 
 # Add prefectagentdev when I've worked out how to have it share data with the flaskdebugrun
 #  prefectagentdev:

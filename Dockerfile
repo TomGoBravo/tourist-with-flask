@@ -7,6 +7,9 @@ FROM python:3.10.7-buster AS builder
 # From https://docs.github.com/en/enterprise-server@3.8/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
 LABEL org.opencontainers.image.source=https://github.com/TomGoBravo/tourist-with-flask
 
+# Put ENV at the top; it seems to be ignored when it is the last statement.
+ENV FLASK_APP=tourist TOURIST_ENV=workspace
+
 # Install git because some packages in requirements need it.
 RUN apt-get update && apt-get install --yes git gcc libsqlite3-mod-spatialite
 
@@ -21,8 +24,6 @@ RUN pip install -r /app/requirements.txt uwsgi
 COPY tourist /app/tourist
 RUN chmod --recursive a+r /app
 
-ENV FLASK_APP=tourist
-ENV TOURIST_ENV=development
 
 
 
@@ -30,6 +31,9 @@ FROM python:3.10.7-slim-buster AS production
 
 # From https://docs.github.com/en/enterprise-server@3.8/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
 LABEL org.opencontainers.image.source=https://github.com/TomGoBravo/tourist-with-flask
+
+# Put ENV at the top; it seems to be ignored when it is the last statement.
+ENV FLASK_APP=tourist TOURIST_ENV=production
 
 # Inspecting the docker layers created above with wagoodman/dive shows the output from them
 # needed for running production is
@@ -43,7 +47,3 @@ COPY --from=builder /usr/local /usr/local
 # this uses apt-get to install libsqlite3-mod-spatialite, which works reliably.
 RUN apt-get update && apt-get install --yes libsqlite3-mod-spatialite && apt-get clean autoclean \
     && rm -fr /var/lib/apt/lists \
-
-ENV FLASK_APP=tourist
-ENV TOURIST_ENV=production
-

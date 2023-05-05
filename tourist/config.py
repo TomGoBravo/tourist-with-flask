@@ -37,17 +37,25 @@ class _ProductionConfig(BaseConfig):
     LOG_LEVEL = logging.INFO
 
 
-class _DevelopmentConfig(BaseConfig):
+class _DevelopmentBaseConfig(BaseConfig):
     """ Dev Environment Config """
     LOG_LEVEL = logging.DEBUG
     EXPLAIN_TEMPLATE_LOADING = False  # This is pretty noisy when enabled.
     USE_FAKE_LOGIN = True
     TESTING = True
 
-    @property
-    def SQLITE_DB_PATH(self) -> str:
-        return os.getenv('SQLITE_DB_PATH', super().SQLITE_DB_PATH)
 
+class _WorkspaceConfig(_DevelopmentBaseConfig):
+    LOG_DIR = '/workspaces/tourist-with-flask/logs'
+
+    @property
+    def DATA_DIR(self) -> pathlib.Path:
+        if 'DATA_DIR' in os.environ:
+            logging.warning(f"Ignoring DATA_DIR env value")
+        return pathlib.Path('/workspaces/tourist-with-flask/dev-data')
+
+
+class _LocalConfig(_DevelopmentBaseConfig):
     @property
     def DATA_DIR(self) -> pathlib.Path:
         # This isn't tested because it is run when SQLALCHEMY_DATABASE_URI is first accessed.
@@ -61,7 +69,7 @@ class _DevelopmentConfig(BaseConfig):
 
 
 def make_test_config(tmp_path: pathlib.Path) -> BaseConfig:
-    class TestConfig(_DevelopmentConfig):
+    class TestConfig(_DevelopmentBaseConfig):
         DATA_DIR = tmp_path
         TESTING = True
         ALLOW_UNAUTHENTICATED_ADMIN = False
@@ -70,14 +78,15 @@ def make_test_config(tmp_path: pathlib.Path) -> BaseConfig:
 
 _by_env = {
     'production': _ProductionConfig(),
-    'development': _DevelopmentConfig(),
+    'local': _LocalConfig(),
+    'workspace': _WorkspaceConfig(),
 }
 
 
 def by_env(*, flask_debug: bool) -> BaseConfig:
-    """Returns config object based on env TOURIST_ENV or passed flask.debug if that isn't set."""
+    """Returns config object based on env TOURIST_ENV or passed `flask.debug` if that isn't set."""
     if flask_debug:
-        default = 'development'
+        default = 'local'
     else:
         default = 'production'
     return _by_env[os.getenv('TOURIST_ENV', default=default)]
