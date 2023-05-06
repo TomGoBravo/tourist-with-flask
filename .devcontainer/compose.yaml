@@ -4,7 +4,7 @@
 services:
   flaskdebugrun:
     image: ghcr.io/tomgobravo/tourist-builder:latest
-    working_dir: /workspace/tourist-with-flask
+    working_dir: /workspaces/tourist-with-flask
     command: flask --debug run
     environment:
       FLASK_RUN_HOST: "0.0.0.0"
@@ -14,22 +14,26 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - ../:/workspace/tourist-with-flask
+      # Mount the parent directory at the same path as github codespaces. When
+      # TOURIST_ENV=workspace config.py uses this for the data and logs.
+      - ../.:/workspaces/tourist-with-flask
 
   prefectagentdev:
     image: ghcr.io/tomgobravo/tourist-builder:latest
-    working_dir: /workspace/tourist-with-flask
+    working_dir: /workspaces/tourist-with-flask
     command: prefect agent start -q development
     network_mode: host
     environment:
       PREFECT_API_URL: "http://127.0.0.1:4200/api"
     volumes:
-      - ../:/workspace/tourist-with-flask
+      - ../.:/workspaces/tourist-with-flask
 
   prefectoriondev:
     image: ghcr.io/tomgobravo/tourist-builder:latest
-    working_dir: /workspace/tourist-with-flask
+    working_dir: /workspaces/tourist-with-flask
     command: prefect orion start
     # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
     # default is reachable from a browser on the host and by prefectagentdevelopment.
     network_mode: host
+    volumes:
+      - ../.:/workspaces/tourist-with-flask

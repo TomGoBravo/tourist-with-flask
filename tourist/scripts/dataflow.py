@@ -1,6 +1,4 @@
-import os
 from typing import Optional
-from typing import Union
 
 import prefect
 from prefect import flow

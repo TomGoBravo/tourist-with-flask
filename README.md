@@ -16,41 +16,27 @@ your own private instance of the tourist. Explore and modify the source in the l
 is a safe place to experiment.
 
 
-## Run a local frontend in a docker container
+## Run a frontend and prefect instance locally with docker
 
 If you can't use codespace to run an instance in the cloud, you can run the same container on 
 your local machine.
 
-To run a development frontend:
 * Install docker on your machine.
-* Checkout git repo <https://github.com/TomGoBravo/tourist-with-flask>.
-* Following instructions need repairs after codespaces were setup...
-* Change into the directory containing `compose.yaml`.
-* Run `docker compose -f compose.yaml up flaskdebugrun` to start a container running flask on
-  your machine.
-* Go to <http://127.0.0.1:5001/tourist/>.
+* Checkout the git repo <https://github.com/TomGoBravo/tourist-with-flask>.
+* Run `docker compose -f .devcontainer/compose.yaml up` to start 3 containers: flask, the prefect
+  agent and prefect server.
+* Visit <http://127.0.0.1:5001/tourist/> to browse the flask server.
+* Run tests in the container with `docker compose -f .devcontainer/compose.yaml run flaskdebugrun python -m pytest tourist/tests`
+* To deploy the prefect flow run `docker compose -f .devcontainer/compose.yaml run prefectagentdev flask sync deploy-dataflow`
+* Visit <http://127.0.0.1:4200> and run the flow you just deployed.
 * Modify the files you checked out from github in the `tourist/` directory. The docker
-  container mounts this directory on your host machine inside the container. Depending on the
-  change you may need to restart `flaskdebugrun` to see your change.
-
-## Run a local prefect pipeline in docker
-
-There is a prefect flow that copies data from remote sources to the local database. To run a
-local copy of it:
-
-(there may be missing steps todo with the prefect configuration. please ask for help if you run 
-into problems.)
-
-* Get the frontend running in docker
-* Start a local copy of the orion server with `docker compose run prefectoriondevelopment --detach`
-* Deploy the flows `PYTHONPATH=. python tourist/scripts/dataflow_deployment.py`
-* Start a local agent with `docker compose -f compose.yaml up prefectagentdevelopment --detach`
-* Make a new run of the flow using the UI at <http://127.0.0.1:4200>.
+  container mounts this directory on your host machine inside the container. Some changes 
+  trigger an automatic reload, others may need you to restart the container.
 
 
 ## Run flask in a local venv
 
-Use this method if you are changing the dependencies or making a new docker image.
+Use this method if you are changing the dependencies or manually making a docker image.
 
 First install [pyenv](https://github.com/pyenv/pyenv). Don't miss [pyenv Common-build-problems](https://github.com/pyenv/pyenv/wiki/Common-build-problems). Then try the following which works in debian 11:
 
