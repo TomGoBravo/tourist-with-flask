@@ -3,7 +3,7 @@
 
 services:
   flaskdebugrun:
-    image: tomgobravo/tourist-builder:latest
+    image: ghcr.io/tomgobravo/tourist-builder:latest
     working_dir: /workspaces/tourist-with-flask
     command: flask --debug run
     environment:
@@ -18,23 +18,22 @@ services:
       # TOURIST_ENV=workspace config.py uses this for the data and logs.
       - ../.:/workspaces/tourist-with-flask
 
-# Add prefectagentdev when I've worked out how to have it share data with the flaskdebugrun
-#  prefectagentdev:
-#    build: .
-#    image: tomgobravo/tourist-builder:latest
-#    command: prefect agent start -q development
-#    network_mode: host
-#    environment:
-#      PREFECT_API_URL: "http://127.0.0.1:4200/api"
-#    volumes:
-#      - ./dev-data:/data
-#      - ./tourist:/app/tourist
+  prefectagentdev:
+    image: ghcr.io/tomgobravo/tourist-builder:latest
+    working_dir: /workspaces/tourist-with-flask
+    command: prefect agent start -q development
+    network_mode: host
+    environment:
+      PREFECT_API_URL: "http://127.0.0.1:4200/api"
+    volumes:
+      - ../.:/workspaces/tourist-with-flask
 
-# prefectoriondev removed to simplify devcontainer for now.
-#  prefectoriondev:
-#    build: .
-#    image: tomgobravo/tourist-builder:latest
-#    command: prefect orion start
-#    # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
-#    # default is reachable from a browser on the host and by prefectagentdevelopment.
-#    network_mode: host
+  prefectoriondev:
+    image: ghcr.io/tomgobravo/tourist-builder:latest
+    working_dir: /workspaces/tourist-with-flask
+    command: prefect orion start
+    # Use network_mode: host because so the local orion server which listens to 127.0.0.1 by
+    # default is reachable from a browser on the host and by prefectagentdevelopment.
+    network_mode: host
+    volumes:
+      - ../.:/workspaces/tourist-with-flask
