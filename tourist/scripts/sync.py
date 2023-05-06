@@ -1,14 +1,14 @@
-import datetime
 from typing import Collection
 from typing import Dict, Iterable, List, Set
 from typing import Optional
-from typing import Sequence
 from typing import Tuple
 
 import shapely
 import shapely.wkt
 from flask.cli import AppGroup
 import click
+from prefect.deployments import Deployment
+
 from tourist.models import tstore, attrib
 from geoalchemy2.shape import to_shape
 import attr
@@ -302,3 +302,15 @@ def _output_place(place_short_name: List[str]):
 def output_place(place_short_name):
     """Print a tstore.Place literal string, which can be handy for writing tests."""
     _output_place(place_short_name)
+
+
+@sync_cli.command('deploy-dataflow')
+def deploy_dataflow():
+    # avoid circular import, oh Python.
+    import tourist.scripts.dataflow
+    Deployment.build_from_flow(
+        flow=tourist.scripts.dataflow.run_gb_fetch_and_sync,
+        name="run_gb_fetch_and_sync",
+        work_queue_name="development",
+        path='/workspaces/tourist-with-flask',
+    ).apply()
