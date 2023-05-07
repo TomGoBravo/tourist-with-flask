@@ -38,6 +38,21 @@ missing information.</div>
 {% for country in world.child_places|sort(attribute='name') %}
 <a class="mui-btn" href="{{country.path}}">{{country.name}} <i class="material-icons">navigate_next</i></a>
 {% endfor %}
+
+{% if world.recently_updated %}
+    <div>
+Recently updated clubs:
+<ul>
+    {% for updated in world.recently_updated %}
+    <li>{% if updated.club_name %}
+        <a href="{{updated.path}}">{{updated.club_name}} in {{updated.place_name}}</a> updated
+        {% else %}
+        {{updated.source_name}} updated <a href="{{updated.path}}">{{updated.place_name}}</a>
+        {% endif %} {{ updated.timestamp | humanize_datetime }}</li>
+    {% endfor %}
+</ul></div>
+{% endif %}
+
 </div>
 
 
