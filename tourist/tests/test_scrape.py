@@ -209,7 +209,6 @@ def test_extract_gbuwh_short(test_app):
 
             response = c.get('/tourist/')
             response_text = response.get_data(as_text=True)
-            print(response_text)
             source_text = re.search(r'GBUWH updated [^>]+>United Kingdom[^>]+>\s+12 hours ago', response_text,
                                     flags=re.MULTILINE).group()
             assert source_text
