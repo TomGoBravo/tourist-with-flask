@@ -65,6 +65,12 @@ def list_view_func():
     return render_template("list.html", world=render_world)
 
 
+@tourist_bp.route("/problems")
+def problems_view_func():
+    problems = render_factory.get_problems()
+    return render_template("problems.html", problems=problems.problems)
+
+
 # Static routes
 #
 # These routes don't load any data from dynamic storage, but some templates have conditional
