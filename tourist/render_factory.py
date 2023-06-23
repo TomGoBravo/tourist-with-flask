@@ -165,10 +165,11 @@ class StatusDateClub:
 
 def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]) -> List[
     render.Problem]:
+    """Returns a list of data quality problems found in the places and clubs."""
     problems = []
     for place in all_places:
         if place.area == 0:
-            problems.append(render.Problem(place.path, render.ProblemType.PLACE_WITHOUT_GEOM,
+            problems.append(render.Problem(place.path,
                                            "Add place location as a polygon on the map"))
     status_date_clubs = []
     for club in all_clubs:
@@ -183,13 +184,11 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
         else:
             problems.append(
                 render.Problem(club.path,
-                               render.ProblemType.CLUB_WITHOUT_STATUS_DATE,
                                f"Add a status_date as a valid YYYY-MM-DD to {club.name}"))
     status_date_clubs.sort()
     for sdc in status_date_clubs[0:5]:
         problems.append(render.Problem(
             sdc.club.path,
-            render.ProblemType.MOST_STALE_CLUBS,
             f"Track down what's happening with {sdc.club.name}, status_date is {sdc.status_date}"))
     return problems
 

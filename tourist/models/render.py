@@ -138,17 +138,9 @@ class PlaceRecursiveNames:
         name: str
 
 
-@unique
-class ProblemType(Enum):
-    PLACE_WITHOUT_GEOM = 'PLACE_WITHOUT_GEOM'
-    CLUB_WITHOUT_STATUS_DATE = 'CLUB_WITHOUT_STATUS_DATE'
-    MOST_STALE_CLUBS = 'MOST_STALE_CLUBS'
-
-
 @attrs.frozen()
 class Problem:
     path: str
-    problem_type: ProblemType
     description: str
 
 

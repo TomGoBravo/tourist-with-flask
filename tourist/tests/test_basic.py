@@ -241,6 +241,10 @@ def test_club_without_status_date(test_app):
         # Check link from pool back to club
         assert 'Foo Club</a> practices here' in response.get_data(as_text=True)
 
+        response = c.get('/tourist/problems')
+        assert response.status_code == 200
+        assert 'Add a status_date as a valid YYYY-MM-DD to Foo' in response.get_data(as_text=True)
+
 
 def test_list(test_app):
     add_some_entities(test_app)
