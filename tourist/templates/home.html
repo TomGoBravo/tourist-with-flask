@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% set menu_exclude_home = True %}
 
 {% block head_extras %}
 <meta name="google-site-verification" content="CJ9r8s8hk-UnN1gsjMioWxqL_e9mq-KBtMBZ_mKc-O0" />
@@ -9,20 +10,6 @@
 {% endblock %}
 
 {% block htmltitle %}Underwater Hockey Tourist{% endblock %}
-
-{% block sidedrawercontent %}
-<ul>
-<li><a class="mui-btn" href="/tourist/map">Map</a></li>
-<li><a class="mui-btn" href="/tourist/list">List all</a></li>
-<li><a class="mui-btn" href="/tourist/about">About</a></li>
-{% if current_user.can_view_comments -%}<li><a class="mui-btn" href="/tourist/comments">Comments</a></li>{% endif -%}
-{% if current_user.is_authenticated -%}
-<li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
-{%  else %}
-<li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
-{% endif -%}
-</ul>
-{% endblock %}
 
 {% block headertitle %}UWH Tourist{% endblock %}
 

@@ -314,8 +314,26 @@ function toggleDisplayById(e_id, btn_id) {
 <a href="/tourist/"><span class="mui--text-title" title="Underwater Hockey Tourist">UWH
   Tourist</span></a>
 </div>
+
+{% set navigation_bar = [
+  ('/tourist/map', 'Map'),
+  ('/tourist/list', 'List all'),
+  ('/tourist/about', 'About'),
+] -%}
+{% if not menu_exclude_home %}{% set navigation_bar = [('/tourist/', 'Home')] + navigation_bar %} {%
+  endif %}
 <div class="mui-divider"></div>
-{% block sidedrawercontent %}{% endblock %}
+  <ul>{% block menu_extra_list_items %}{% endblock -%}
+    {% for href, name in navigation_bar %}
+    {% if menu_active != name %}<li><a class="mui-btn" href="{{ href|e }}">{{ name|e }}</a></li>{% endif -%}
+    {% endfor -%}
+    {% if menu_active != 'Comments' and current_user.can_view_comments -%}<li><a class="mui-btn" href="/tourist/comments">Comments</a></li>{% endif -%}
+    {% if current_user.is_authenticated -%}
+    <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
+    {%  else %}
+    <li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
+    {% endif -%}
+  </ul>
 </div>
 
 <header id="header">
