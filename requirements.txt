@@ -6,7 +6,7 @@
 #
 aiofiles==0.8.0
     # via prefect
-aiohttp==3.8.1
+aiohttp==3.8.5
     # via prefect
 aiosignal==1.2.0
     # via aiohttp
@@ -78,10 +78,6 @@ cryptography==40.0.2
     # via prefect
 docker==5.0.3
     # via prefect
-exceptiongroup==1.0.0rc9
-    # via
-    #   cattrs
-    #   pytest
 fastapi==0.95.1
     # via prefect
 flask==2.3.2
@@ -317,9 +313,7 @@ text-unidecode==1.3
 toml==0.10.2
     # via prefect
 tomli==2.0.0
-    # via
-    #   pep517
-    #   pytest
+    # via pep517
 typer==0.6.1
     # via prefect
 typing-extensions==4.0.1
