@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% set menu_exclude_home = True %}
 
 {% block htmltitle %}UWHT: {{place.name}}{% endblock %}
 
@@ -9,22 +10,11 @@
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
 {% endblock %}
 
-{% block sidedrawercontent %}
-<ul>
+{% block menu_extra_list_items%}
 {# TODO: Add some kind of indent showing these are nested places. -#}
 {% for p in place.parents|reverse -%}
 <li><a class="mui-btn" href="{{ p.path }}">{{ p.name }}</a></li>
 {% endfor -%}
-<li><a class="mui-btn" href="/tourist/map">Map</a></li>
-<li><a class="mui-btn" href="/tourist/list">List all</a></li>
-<li><a class="mui-btn" href="/tourist/about">About</a></li>
-{% if current_user.can_view_comments -%}<li><a class="mui-btn" href="/tourist/comments">Comments</a></li>{% endif -%}
-{% if current_user.is_authenticated -%}
-<li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
-{%  else %}
-<li><a class="mui-btn" href="{{ url_for('github.login', next=request.url) }}">Sign in</a></li>
-{% endif -%}
-</ul>
 {% endblock %}
 
 {% block headertitle %}{{place.name}}
