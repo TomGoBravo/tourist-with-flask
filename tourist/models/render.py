@@ -91,6 +91,17 @@ class ChildPlace:
 
 
 @attrs.frozen()
+class RecentlyUpdated:
+    timestamp: datetime.datetime
+    path: str
+    place_name: str
+    # club_name set if timestamp is status_date of a single club
+    club_name: Optional[str] = None
+    # source_name set if timestamp is the sync_timestamp of a source
+    source_name: Optional[str] = None
+
+
+@attrs.frozen()
 class Place:
     id: int
     name: str
@@ -103,6 +114,7 @@ class Place:
     child_places: List[ChildPlace]
     parents: List[ChildPlace]
     comments: List[PlaceComment] = attrs.field(factory=list)
+    recently_updated: Optional[List[RecentlyUpdated]] = None
 
 
 @attrs.frozen()

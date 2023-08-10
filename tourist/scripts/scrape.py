@@ -733,6 +733,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, fetch_timestamp: dat
     tstore_source.sync_timestamp = fetch_timestamp
     tstore_source.name = feed.source.name
     tstore_source.logo_url = feed.source.icon
+    tstore_source.place_id = uk_place.id
 
     tstore.db.session.commit()
 

@@ -279,6 +279,11 @@ class Club(db.Model, Entity):
             except ValueError:
                 raise ValueError("status_date must be a date in ISO YYYY-MM-DD format")
 
+    @property
+    def status_datetime(self):
+        # status_date is always YYYY-MM-DD so a datetime.date makes sense but there are already some places that
+        # expect a datetime.datetime.
+        return datetime.datetime.fromisoformat(self.status_date)
 
     @property
     def path(self) -> str:
@@ -415,6 +420,7 @@ class Source(db.Model, EntityChild):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     logo_url = db.Column(db.String)
+    place_id = db.Column(db.Integer)
     source_short_name = db.Column(db.String, nullable=False, unique=True)
     sync_timestamp = db.Column(db.DateTime(), nullable=True)
 

@@ -88,6 +88,25 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
             east=maxx
         )
 
+    if orm_place.short_name == 'world':
+        club: tstore.Club
+        recently_updated = []
+        for club in tstore.db.session.query(tstore.Club).filter(tstore.Club.status_date.like('____-__-__')).order_by(tstore.Club.status_date.desc()).limit(5):
+            recently_updated.append(render.RecentlyUpdated(
+                timestamp=club.status_datetime, path=club.path, club_name=club.name, place_name=club.parent.name))
+        source: tstore.Source
+        for source in tstore.db.session.query(tstore.Source).all():
+            if not source.place_id:
+                continue
+            place: tstore.Place = tstore.db.session.get(tstore.Place, source.place_id)
+            if not place:
+                continue
+            recently_updated.append(render.RecentlyUpdated(
+                timestamp=source.sync_timestamp, path=place.path, place_name=place.name, source_name=source.name))
+        recently_updated.sort(key=lambda ru: ru.timestamp, reverse=True)
+    else:
+        recently_updated = None
+
     return render.Place(
         id=orm_place.id,
         name=orm_place.name,
@@ -99,6 +118,7 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
         bounds=bounds,
         child_places=child_places,
         parents=parents,
+        recently_updated=recently_updated,
         comments=comments,
     )
 
