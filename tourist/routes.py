@@ -107,7 +107,7 @@ class ClubForm(FlaskForm):
 
 @tourist_bp.route("/edit/club/<int:club_id>", methods=['GET', 'POST'])
 def edit_club(club_id):
-    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+    if not flask_login.current_user.edit_granted:
         return tourist.inaccessible_response()
 
     club = tstore.Club.query.get_or_404(club_id)
@@ -131,7 +131,7 @@ class PlaceForm(FlaskForm):
 
 @tourist_bp.route("/edit/place/<int:place_id>", methods=['GET', 'POST'])
 def edit_place(place_id):
-    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+    if not flask_login.current_user.edit_granted:
         return tourist.inaccessible_response()
 
     place = tstore.Place.query.get_or_404(place_id)
@@ -204,7 +204,7 @@ def delete_place_children_and_flash(place: tstore.Place):
 
 @tourist_bp.route("/delete/place/<int:place_id>", methods=['GET', 'POST'])
 def delete_place(place_id):
-    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+    if not flask_login.current_user.edit_granted:
         return tourist.inaccessible_response()
 
     place = tstore.Place.query.get_or_404(place_id)
@@ -222,7 +222,7 @@ def delete_place(place_id):
 
 @tourist_bp.route("/delete/club/<int:club_id>", methods=['GET', 'POST'])
 def delete_club(club_id):
-    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+    if not flask_login.current_user.edit_granted:
         return tourist.inaccessible_response()
 
     club = tstore.Club.query.get_or_404(club_id)
@@ -240,7 +240,7 @@ def delete_club(club_id):
 
 @tourist_bp.route("/delete/pool/<int:pool_id>", methods=['GET', 'POST'])
 def delete_pool(pool_id):
-    if not (flask_login.current_user.is_authenticated and flask_login.current_user.edit_granted):
+    if not flask_login.current_user.edit_granted:
         return tourist.inaccessible_response()
 
     pool = tstore.Pool.query.get_or_404(pool_id)
