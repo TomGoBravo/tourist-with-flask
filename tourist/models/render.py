@@ -141,6 +141,7 @@ class PlaceRecursiveNames:
 @attrs.frozen()
 class Problem:
     path: str
+    name: str
     description: str
 
 

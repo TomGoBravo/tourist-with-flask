@@ -229,6 +229,7 @@ def add_and_return_edit_granted_user(test_app):
 
 def test_club_without_status_date(test_app):
     add_some_entities(test_app)
+    edit_user = add_and_return_edit_granted_user(test_app)
 
     with test_app.app_context():
         assert not tstore.Club.query.filter_by(short_name='shortie').one().status_date
@@ -241,6 +242,7 @@ def test_club_without_status_date(test_app):
         # Check link from pool back to club
         assert 'Foo Club</a> practices here' in response.get_data(as_text=True)
 
+    with test_app.app_context(), test_app.test_client(user=edit_user) as c:
         response = c.get('/tourist/problems')
         assert response.status_code == 200
         assert 'Add a status_date as a valid YYYY-MM-DD to Foo' in response.get_data(as_text=True)

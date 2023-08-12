@@ -67,6 +67,9 @@ def list_view_func():
 
 @tourist_bp.route("/problems")
 def problems_view_func():
+    if not flask_login.current_user.can_view_problems:
+        return tourist.inaccessible_response()
+
     problems = render_factory.get_problems()
     return render_template("problems.html", problems=problems.problems)
 

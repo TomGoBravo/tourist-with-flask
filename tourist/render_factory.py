@@ -90,7 +90,7 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
             east=maxx
         )
 
-    if orm_place.short_name == 'world':
+    if orm_place.is_world:
         club: tstore.Club
         recently_updated = []
         for club in tstore.db.session.query(tstore.Club).filter(tstore.Club.status_date.like('____-__-__')).order_by(tstore.Club.status_date.desc()).limit(5):
@@ -168,8 +168,9 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
     """Returns a list of data quality problems found in the places and clubs."""
     problems = []
     for place in all_places:
-        if place.area == 0:
+        if place.area == 0 and not place.is_world:
             problems.append(render.Problem(place.path,
+                                           place.name,
                                            "Add place location as a polygon on the map"))
     status_date_clubs = []
     for club in all_clubs:
@@ -184,11 +185,13 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
         else:
             problems.append(
                 render.Problem(club.path,
+                               club.parent.name,
                                f"Add a status_date as a valid YYYY-MM-DD to {club.name}"))
     status_date_clubs.sort()
     for sdc in status_date_clubs[0:5]:
         problems.append(render.Problem(
             sdc.club.path,
+            sdc.club.parent.name,
             f"Track down what's happening with {sdc.club.name}, status_date is {sdc.status_date}"))
     return problems
 
@@ -215,7 +218,7 @@ def yield_cache():
         render_place = _build_render_place(place, source_by_short_name)
         yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
                                      value_dict=cattrs.unstructure(render_place))
-        if place.short_name == 'world':
+        if place.is_world:
             render_names_world = _build_place_recursive_names(place)
             yield tstore.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
                                          value_dict=attrs.asdict(

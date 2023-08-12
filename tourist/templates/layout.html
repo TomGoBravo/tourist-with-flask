@@ -319,7 +319,6 @@ function toggleDisplayById(e_id, btn_id) {
   ('/tourist/map', 'Map'),
   ('/tourist/list', 'List all'),
   ('/tourist/about', 'About'),
-  ('/tourist/problems', 'Problems'),
 ] -%}
 {% if not menu_exclude_home %}{% set navigation_bar = [('/tourist/', 'Home')] + navigation_bar %} {%
   endif %}
@@ -328,7 +327,10 @@ function toggleDisplayById(e_id, btn_id) {
     {% for href, name in navigation_bar %}
     {% if menu_active != name %}<li><a class="mui-btn" href="{{ href|e }}">{{ name|e }}</a></li>{% endif -%}
     {% endfor -%}
-    {% if menu_active != 'Comments' and current_user.can_view_comments -%}<li><a class="mui-btn" href="/tourist/comments">Comments</a></li>{% endif -%}
+    {% if menu_active != 'Comments' and current_user.can_view_comments -%}
+      <li><a class="mui-btn" href="/tourist/comments">Comments</a></li>{% endif -%}
+    {% if menu_active != 'Problems' and current_user.can_view_problems -%}
+      <li><a class="mui-btn" href="/tourist/problems">Problems</a></li>{% endif -%}
     {% if current_user.is_authenticated -%}
     <li><a class="mui-btn" href="{{ url_for('github.logout', next=request.url) }}">Sign out</a></li>
     {%  else %}
