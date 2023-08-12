@@ -1,4 +1,5 @@
 import csv
+import datetime
 import enum
 import io
 from typing import List, Mapping
@@ -20,6 +21,7 @@ class RenderName(enum.Enum):
     PLACE_NAMES_WORLD = "/place_names_world"
     CSV_ALL = "/csv"
     POOLS_GEOJSON = "/pools.geojson"
+    PROBLEMS = "/problems_list"
 
 
 def _build_render_club_source(orm_source: tstore.Source) -> render.ClubSource:
@@ -88,7 +90,7 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
             east=maxx
         )
 
-    if orm_place.short_name == 'world':
+    if orm_place.is_world:
         club: tstore.Club
         recently_updated = []
         for club in tstore.db.session.query(tstore.Club).filter(tstore.Club.status_date.like('____-__-__')).order_by(tstore.Club.status_date.desc()).limit(5):
@@ -155,6 +157,51 @@ def _build_geojson_feature_collection(all_places, all_pools):
     return geojson_feature_collection
 
 
+@attrs.frozen(order=True)
+class StatusDateClub:
+    status_date: datetime.date = attrs.field(order=True)
+    club: tstore.Club = attrs.field(order=False)
+
+
+def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]) -> List[
+    render.Problem]:
+    """Returns a list of data quality problems found in the places and clubs."""
+    problems = []
+    for place in all_places:
+        if place.area == 0 and not place.is_world:
+            problems.append(render.Problem(place.path,
+                                           place.name,
+                                           "Add place location as a polygon on the map"))
+    status_date_clubs = []
+    for club in all_clubs:
+        if club.source_short_name:
+            continue
+        try:
+            parsed = datetime.date.fromisoformat(club.status_date)
+        except (ValueError, TypeError):
+            parsed = None
+        if parsed:
+            status_date_clubs.append(StatusDateClub(parsed, club))
+        else:
+            problems.append(
+                render.Problem(club.path,
+                               club.parent.name,
+                               f"Add a status_date as a valid YYYY-MM-DD to {club.name}"))
+    status_date_clubs.sort()
+    for sdc in status_date_clubs[0:5]:
+        problems.append(render.Problem(
+            sdc.club.path,
+            sdc.club.parent.name,
+            f"Track down what's happening with {sdc.club.name}, status_date is {sdc.status_date}"))
+    return problems
+
+
+
+
+
+
+
+
 def yield_cache():
     def get_all(cls):
         all_objects = IdentitySet(cls.query.all()) | tstore.db.session.dirty | tstore.db.session.new
@@ -171,11 +218,15 @@ def yield_cache():
         render_place = _build_render_place(place, source_by_short_name)
         yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
                                      value_dict=cattrs.unstructure(render_place))
-        if place.short_name == 'world':
+        if place.is_world:
             render_names_world = _build_place_recursive_names(place)
             yield tstore.RenderCache(name=RenderName.PLACE_NAMES_WORLD.value,
                                          value_dict=attrs.asdict(
                                              render_names_world))
+
+    yield tstore.RenderCache(name=RenderName.PROBLEMS.value,
+                             value_dict=cattrs.unstructure(render.Problems(_build_problems(
+                                 all_places, all_clubs))))
 
     geojson_feature_collection = _build_geojson_feature_collection(all_places, all_pools)
 
@@ -213,3 +264,7 @@ def get_place_names_world() -> render.PlaceRecursiveNames:
 def get_string(name: RenderName) -> str:
     return tstore.RenderCache.query.get(name.value).value_str
 
+
+def get_problems() -> render.Problems:
+    problems_dict = tstore.RenderCache.query.get_or_404(RenderName.PROBLEMS.value ).value_dict
+    return cattrs.structure(problems_dict, render.Problems)

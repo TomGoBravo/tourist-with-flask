@@ -29,6 +29,9 @@ def test_heavy(test_app):
         response = c.get('/tourist/comments')
         assert response.status_code == 302  # Without login, redirects
 
+        response = c.get('/tourist/problems')
+        assert response.status_code == 302  # Without login, redirects
+
     # Login. This user isn't authorized to /admin
     with test_app.test_client(user=user_plain) as c:
         response = c.get('/tourist/')
@@ -52,6 +55,9 @@ def test_heavy(test_app):
         assert response.status_code == 403
 
         response = c.get('/tourist/comments')
+        assert response.status_code == 403
+
+        response = c.get('/tourist/problems')
         assert response.status_code == 403
 
     with test_app.app_context():
@@ -83,6 +89,10 @@ def test_heavy(test_app):
 
         response = c.get('/tourist/comments')
         assert response.status_code == 200
+
+        response = c.get('/tourist/problems')
+        assert response.status_code == 200
+
 
     with test_app.app_context():
         new_au = tstore.Place.query.filter_by(short_name='au').one()

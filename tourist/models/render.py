@@ -138,5 +138,17 @@ class PlaceRecursiveNames:
         name: str
 
 
+@attrs.frozen()
+class Problem:
+    path: str
+    name: str
+    description: str
+
+
+@attrs.frozen()
+class Problems:
+    problems: List[Problem]
+
+
 cattrs.register_structure_hook(datetime.datetime, lambda d, t: datetime.datetime.fromisoformat(d))
 cattrs.register_unstructure_hook(datetime.datetime, lambda d: d.isoformat())

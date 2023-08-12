@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block htmltitle %}UWHT: Problems{% endblock %}
+
+{% block headertitle %}Problems{% endblock %}
+
+{% block content %}
+
+<ul>
+{%- for p in problems %}
+<li>In <a href="{{ p.path }}">{{p.name}}</a>: {{ p.description }}</li>
+{%- endfor %}
+</ul>
+{% endblock %}
