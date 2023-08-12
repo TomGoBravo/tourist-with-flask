@@ -324,5 +324,8 @@ def log_view_func():
 
 @tourist_bp.route("/comments")
 def comments_view_func():
+    if not flask_login.current_user.can_view_comments:
+        return tourist.inaccessible_response()
+
     comments = list(tstore.PlaceComment.query.order_by(tstore.PlaceComment.timestamp).all())
     return render_template("comments.html", comments=comments)
