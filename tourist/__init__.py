@@ -141,43 +141,23 @@ def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
 
     @event.listens_for(db.session, "before_flush")
     def before_flush(session, flush_context, instances):
-        update_render_after_flush = False
         for instance in session.new | session.dirty:
             if not session.is_modified(instance):
                 continue
-            if isinstance(instance, (tstore.Entity, tstore.EntityChild)):
-                update_render_after_flush = True
             if isinstance(instance, tstore.Entity):
                 instance.validate()
 
-        for instance in session.deleted:
-            if isinstance(instance, (tstore.Entity, tstore.EntityChild)):
-                update_render_after_flush = True
-
-        if update_render_after_flush:
-            session.info[UPDATE_RENDER_AFTER_FLUSH] = True
-
-    @event.listens_for(db.session, "after_flush_postexec")
-    def after_flush_postexec(session, flush_context):
-        if session.info.get(UPDATE_RENDER_AFTER_FLUSH, False):
-            # ORM model objects that haven't been loaded from the database are slightly different
-            # from those populated from a form. In particular `region` is a str instead of
-            # geometry type. Instead of changing the render_factory to handle both types force
-            # objects used for the render to be refreshed from the database.
-            # expire_all() breaks some login tests so expire only pool/place/club objects.
-            for instance in session.identity_map.values():
-                if isinstance(instance, tstore.Entity):
-                    session.expire(instance)
-            new_cache_ids = []
-            for new_cache in render_factory.yield_cache():
-                session.add(new_cache)
-                new_cache_ids.append(new_cache.name)
-            # Remove rows in RenderCache not in new_cache_ids. This should be removed places.
-            session.query(tstore.RenderCache).filter(tstore.RenderCache.name.notin_(
-                new_cache_ids)).delete()
-            del session.info[UPDATE_RENDER_AFTER_FLUSH]
-
     return app
+
+
+def update_render_cache(session):
+    new_cache_ids = []
+    for new_cache in render_factory.yield_cache():
+        session.add(new_cache)
+        new_cache_ids.append(new_cache.name)
+    # Remove rows in RenderCache not in new_cache_ids. This should be removed places.
+    session.query(tstore.RenderCache).filter(tstore.RenderCache.name.notin_(new_cache_ids)).delete()
+    session.commit()
 
 
 def initialise_logger(app):

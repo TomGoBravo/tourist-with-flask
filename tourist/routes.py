@@ -126,6 +126,7 @@ def edit_club(club_id):
         form_delete_place_comments()
         flask.flash(f"Updated {club.name}")
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         return redirect(club.path)
     return render_template("edit_club.html", form=form, club=club)
 
@@ -150,6 +151,7 @@ def edit_place(place_id):
         form_delete_place_comments()
         flask.flash(f"Updated {place.name}")
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         return redirect(place.path)
     return render_template("edit_place.html", form=form, place=place)
 
@@ -179,6 +181,7 @@ def add_place_comment(place_id):
         place_comment.akismet_spam_status = tourist.get_comment_spam_status(place_comment)
         tstore.db.session.add(place_comment)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         flask.flash(f"Comment added to {place.name}")
     else:
         flask.flash(f"Ignored empty comment for {place.name}")
@@ -224,6 +227,7 @@ def delete_place(place_id):
         parent_path = place.parent.path
         delete_place_children_and_flash(place)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         return redirect(parent_path)
 
     return render_template('delete_place.html', form=form, place=place)
@@ -242,6 +246,7 @@ def delete_club(club_id):
         parent_path = club.parent.path
         delete_club_and_flash(club)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         return redirect(parent_path)
 
     return render_template('delete_club.html', form=form, club=club)
@@ -262,6 +267,7 @@ def delete_pool(pool_id):
         parent_path = pool.parent.path
         delete_pool_and_flash(pool)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         return redirect(parent_path)
 
     return render_template('delete_pool.html', form=form, pool=pool)

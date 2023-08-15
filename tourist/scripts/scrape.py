@@ -736,6 +736,7 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, fetch_timestamp: dat
     tstore_source.place_id = uk_place.id
 
     tstore.db.session.commit()
+    tourist.update_render_cache(tstore.db.session)
 
     return []
 
@@ -874,6 +875,7 @@ def comment_command():
             print(f"Comment added to {place.short_name}:\n{comment}")
     tstore.db.session.add_all(comment_to_extract.keys())
     tstore.db.session.commit()
+    tourist.update_render_cache(tstore.db.session)
     for comment, extract in comment_to_extract.items():
         tstore.db.session.refresh(comment)
         assert comment.id
