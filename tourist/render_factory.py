@@ -219,12 +219,6 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
     return problems
 
 
-
-
-
-
-
-
 def yield_cache():
     def get_all(cls):
         all_objects = IdentitySet(cls.query.all()) | tstore.db.session.dirty | tstore.db.session.new
