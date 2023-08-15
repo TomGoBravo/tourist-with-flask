@@ -114,7 +114,7 @@ class Place(db.Model, Entity):
 
     def validate(self):
         _validate_short_name(self.short_name)
-        if self.parent_id is None and self.parent is None and self.short_name != 'world':
+        if self.parent_id is None and self.parent is None and not self.is_world:
             raise ValueError("parent unset. Every place must have a parent.")
         if self.markdown and re.search(WIKI_LINK_RE, self.markdown) is not None:
             raise ValueError("Place markdown must not contain [[Wiki Links]]")
@@ -188,6 +188,10 @@ class Place(db.Model, Entity):
         parent_short_name = self.parent and self.parent.short_name or ''
         return place_as_attrib_entity(self, parent_short_name)
 
+    @property
+    def is_world(self) -> bool:
+        return self.short_name == 'world'
+
 
 def place_as_attrib_entity(place, parent_short_name: str):
     return attrib.Entity(
@@ -218,11 +222,16 @@ class User(db.Model, flask_login.UserMixin):
     def can_view_comments(self) -> bool:
         return self.edit_granted
 
+    @property
+    def can_view_problems(self) -> bool:
+        return self.edit_granted
+
 
 # Anonymous user with same attributes as a logged in `User` for consistency in templates.
 class AnonymousUser(flask_login.AnonymousUserMixin):
     edit_granted = False
     can_view_comments = False
+    can_view_problems = False
 
 
 class OAuth(OAuthConsumerMixin, db.Model):
