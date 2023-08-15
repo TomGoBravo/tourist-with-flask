@@ -9,6 +9,7 @@ from flask.cli import AppGroup
 import click
 from prefect.deployments import Deployment
 
+import tourist
 from tourist.models import tstore, attrib
 from geoalchemy2.shape import to_shape
 import attr
@@ -226,6 +227,7 @@ class Importer:
         print('Updated fields ' + ','.join(self.updater.updated_fields))
         tstore.db.session.add_all(self.updater.to_add)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
 
 @sync_cli.command('import_jsonl')

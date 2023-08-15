@@ -102,6 +102,22 @@ class RecentlyUpdated:
 
 
 @attrs.frozen()
+class PlaceEntityChanges:
+    """Changes for an entity (place, club, pool) in a very crude format, but good enough for
+    debugging."""
+
+    @attrs.frozen()
+    class Change:
+        """A single version of an entity"""
+        timestamp: datetime.datetime
+        user: str
+        change: str
+
+    entity_name: str
+    changes: List[Change] = attrs.field(factory=list)
+
+
+@attrs.frozen()
 class Place:
     id: int
     name: str
@@ -114,7 +130,10 @@ class Place:
     child_places: List[ChildPlace]
     parents: List[ChildPlace]
     comments: List[PlaceComment] = attrs.field(factory=list)
+    # recently_updated, only set for 'world'
     recently_updated: Optional[List[RecentlyUpdated]] = None
+    # changes for this place and all direct children. not set for 'world'
+    changes: Optional[List[PlaceEntityChanges]] = None
 
 
 @attrs.frozen()

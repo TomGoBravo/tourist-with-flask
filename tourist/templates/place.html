@@ -143,11 +143,23 @@ Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point
 
 {% if current_user.edit_granted -%}
 {{ place_comments(place.comments) }}
+
     <hr>
     <h3>Add in {{ place.name }}:</h3>
     <a class="mui-btn" href="{{ url_for('place.create_view', parent=place.short_name) }}">place <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('club.create_view', parent=place.short_name) }}">club <i class="material-icons">add</i></a>
     <a class="mui-btn" href="{{ url_for('pool.create_view', parent=place.short_name) }}">pool <i class="material-icons">add</i></a>
+<hr>
+<h3>History</h3>
+<ul>
+    {% for e in place.changes -%}
+    <li><b>{{e.entity_name}}</b>
+        <ul>{% for cs in e.changes -%}
+            <li>{{cs.timestamp}} {{cs.user}} {{cs.change}}</li>{% endfor -%}
+        </ul>
+    </li>
+    {% endfor %}
+</ul>
 {% else %}
 {% if place.comments -%}<hr>There are comments about this place. Login to view and handle
 them.<hr>{% endif %}

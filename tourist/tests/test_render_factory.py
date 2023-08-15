@@ -1,5 +1,6 @@
 from geoalchemy2 import WKTElement
 
+import tourist
 from tourist import render_factory
 from tourist.models import tstore
 
@@ -34,6 +35,7 @@ def test_geojson(test_app):
                            markdown='', entrance=point1)
         tstore.db.session.add_all([world, country, metro_with_pool, metro_no_pool, pool, poolgeo])
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
     with test_app.app_context():
         collection = render_factory._build_geojson_feature_collection(tstore.Place.query.all(),

@@ -94,6 +94,7 @@ def replace_club_pool_links(write):
     if write:
         click.echo('Committing changes')
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
     else:
         click.echo('Run with --write to commit changes')
 
@@ -161,6 +162,7 @@ def transactionshift(write: bool):
     if write:
         click.echo('Committing changes')
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
     else:
         click.echo('Run with --write to commit changes')
 
@@ -404,6 +406,7 @@ def transactioninsert1(initial_snapshot: str, change_log: str, output_path: str,
     if commit:
         click.echo('Committing changes')
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
     else:
         click.echo('Run with --write to commit changes')
 
@@ -435,5 +438,6 @@ def remove_empty_places(descendants_of_short_name: str, write: bool):
             tstore.db.session.delete(place)
         click.echo('Committing changes')
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
     else:
         click.echo('Run with --write to commit changes')

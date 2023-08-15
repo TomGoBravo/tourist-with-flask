@@ -2,7 +2,9 @@ import csv
 import datetime
 import enum
 import io
+import itertools
 from typing import List, Mapping
+from typing import Union
 
 from sqlalchemy.util import IdentitySet
 
@@ -59,6 +61,20 @@ def _build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
     )
 
 
+def _build_changes(orm_entity: Union[tstore.Place, tstore.Club, tstore.Pool]) -> (
+        render.PlaceEntityChanges):
+    changes = render.PlaceEntityChanges(entity_name=orm_entity.name)
+
+    for v in orm_entity.versions:
+        user_email = None
+        if v.transaction.user:
+            user_email = v.transaction.user.email
+        changes.changes.append(render.PlaceEntityChanges.Change(
+            timestamp=v.transaction.issued_at, user=user_email,
+            change=str(v.changeset)))
+    return changes
+
+
 def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[str, render.ClubSource]) -> render.Place:
     children_geojson = orm_place.children_geojson_features
     if children_geojson:
@@ -106,8 +122,14 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
             recently_updated.append(render.RecentlyUpdated(
                 timestamp=source.sync_timestamp, path=place.path, place_name=place.name, source_name=source.name))
         recently_updated.sort(key=lambda ru: ru.timestamp, reverse=True)
+        entity_changes = None
     else:
         recently_updated = None
+        entity_changes = [_build_changes(orm_place)]
+        for child in itertools.chain(orm_place.child_places, orm_place.child_pools,
+                                           orm_place.child_clubs):
+            entity_changes.append(_build_changes(child))
+
 
     return render.Place(
         id=orm_place.id,
@@ -122,6 +144,7 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
         parents=parents,
         recently_updated=recently_updated,
         comments=comments,
+        changes=entity_changes,
     )
 
 
@@ -194,12 +217,6 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
             sdc.club.parent.name,
             f"Track down what's happening with {sdc.club.name}, status_date is {sdc.status_date}"))
     return problems
-
-
-
-
-
-
 
 
 def yield_cache():

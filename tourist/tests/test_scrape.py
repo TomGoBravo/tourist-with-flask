@@ -149,6 +149,7 @@ def add_uk(test_app):
 
         tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2])
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
 
 def test_extract_gbuwh_short(test_app):
@@ -276,6 +277,7 @@ def add_canada(test_app):
                           region=some_region, markdown='')
         tstore.db.session.add_all([world, ca, cabc, caon])
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
 
 def test_load_and_comment(test_app):
