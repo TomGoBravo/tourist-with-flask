@@ -18,6 +18,11 @@ from more_itertools import last
 
 import tourist
 from tourist import render_factory
+from tourist.continuumutils import ClubVersion
+from tourist.continuumutils import PlaceVersion
+from tourist.continuumutils import PoolVersion
+from tourist.continuumutils import Transaction
+from tourist.continuumutils import type_to_version_cls
 from tourist.models import attrib
 from tourist.models import tstore
 from tourist.models.tstore import PAGE_LINK_RE
@@ -167,10 +172,6 @@ def transactionshift(write: bool):
         click.echo('Run with --write to commit changes')
 
 
-PoolVersion = sqlalchemy_continuum.version_class(tstore.Pool)
-PlaceVersion = sqlalchemy_continuum.version_class(tstore.Place)
-ClubVersion = sqlalchemy_continuum.version_class(tstore.Club)
-Transaction = sqlalchemy_continuum.transaction_class(tstore.Club)
 operation_type_column_name = sqlalchemy_continuum.utils.option(tstore.Club,
                                                          'operation_type_column_name')
 
@@ -264,13 +265,6 @@ class VersionTable:
         for version_obj in self.latest_versions():
             if version_obj.operation_type != sqlalchemy_continuum.Operation.DELETE:
                 yield version_obj
-
-
-type_to_version_cls = {
-    'place': PlaceVersion,
-    'pool': PoolVersion,
-    'club': ClubVersion,
-}
 
 
 @attr.s(auto_attribs=True)
