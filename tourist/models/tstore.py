@@ -5,6 +5,7 @@ Objects that store hockey tourist data for editing.
 import datetime
 import math
 import re
+from abc import abstractmethod
 from itertools import chain
 from typing import Dict, Union, Optional
 from typing import Iterable
@@ -77,7 +78,13 @@ def _validate_short_name(short_name):
 class Entity:
     """Base class for the main objects."""
     # TODO(TomGoBravo): Work out how to incorporate common methods (as_attrib_entity, ...) here.
-    pass
+    @property
+    @abstractmethod
+    def parent(self) -> 'Place': ...
+
+    @property
+    @abstractmethod
+    def short_name(self) -> str: ...
 
 
 class EntityChild:

@@ -1,4 +1,5 @@
 import datetime
+import operator
 import re
 from collections import defaultdict
 from typing import Dict
@@ -10,10 +11,12 @@ from typing import Tuple
 from typing import Type
 
 import attr
+import attrs
 import click
 import sqlalchemy_continuum
 from flask.cli import AppGroup
 import flask
+from geoalchemy2.shape import to_shape
 from more_itertools import last
 
 import tourist
@@ -435,3 +438,45 @@ def remove_empty_places(descendants_of_short_name: str, write: bool):
         tourist.update_render_cache(tstore.db.session)
     else:
         click.echo('Run with --write to commit changes')
+
+
+@attrs.frozen(order=True)
+class EntityMeasure:
+    entity: tstore.Entity = attrs.field(order=False)
+    # measure units depend on the context
+    measure: float = attrs.field(order=True)
+
+
+@batchtool_cli.command('check-geo',
+                       help='Check the geometry for all descendants of given place.')
+@click.argument('descendants-of-short-name')
+def check_geo(descendants_of_short_name: str):
+    base_place = tstore.Place.query.filter_by(short_name=descendants_of_short_name).one()
+    places_parent_intersection = []
+    pool_parent_distance = []
+
+    def _check_place(place: tstore.Place) -> None:
+        place_poly = to_shape(place.region)
+        for child_place in place.child_places:
+            child_poly = to_shape(child_place.region)
+            part_in_parent = place_poly.intersection(child_poly).area / child_poly.area
+            places_parent_intersection.append(EntityMeasure(child_place, part_in_parent))
+            _check_place(child_place)
+
+        for child_pool in place.child_pools:
+            pool_pt = to_shape(child_pool.entrance)
+            dist = place_poly.distance(pool_pt)
+            pool_parent_distance.append(EntityMeasure(child_pool, dist))
+
+    _check_place(base_place)
+
+    ed: EntityMeasure
+    click.echo("Places, by intersection ratio with parent. 1 for places in parent, smaller is "
+               "worse.")
+    for ed in sorted(places_parent_intersection)[:10]:
+        click.echo(f"{ed.entity.short_name} in {ed.entity.parent.short_name}: {ed.measure}")
+
+    click.echo("\nPools, by distance from parent. 0 for pools in the place, "
+               "the units are fairly meaningless degrees but bigger means worse.")
+    for ed in sorted(pool_parent_distance, reverse=True)[:10]:
+        click.echo(f"{ed.entity.short_name} in {ed.entity.parent.short_name}: {ed.measure}")
