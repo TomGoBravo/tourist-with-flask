@@ -306,7 +306,7 @@ sqlalchemy[asyncio]==1.4.31
     #   prefect
     #   sqlalchemy-continuum
     #   sqlalchemy-utils
-sqlalchemy-continuum==1.4.0
+sqlalchemy-continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6bd7952185b1f82af985c0271834d886a617c
     # via -r requirements.in
 sqlalchemy-utils==0.38.2
     # via sqlalchemy-continuum
