@@ -9,7 +9,10 @@ attrs
 cattrs
 git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-geoatileattributionurl#egg=Flask-Admin
 geojson>=2.4.1
-SQLAlchemy-Continuum
+
+# Use head as of 2023-08-27 to get fix for https://github.com/kvesteri/sqlalchemy-continuum/issues/322 because it
+# hasn't been released yet.
+SQLAlchemy-Continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6bd7952185b1f82af985c0271834d886a617c
 Flask
 Flask-SQLAlchemy
 Flask-Markdown
