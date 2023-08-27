@@ -46,6 +46,12 @@ class TouristAdminBaseModelView(IsEditUserMixin, geoa.ModelView):
             form.parent.data = parent_obj
         return form
 
+    def after_model_delete(self, model):
+        tourist.update_render_cache(tstore.db.session)
+
+    def after_model_change(self, form, model, is_created):
+        tourist.update_render_cache(tstore.db.session)
+
 
 class PlaceAdminModelView(TouristAdminBaseModelView):
     column_list = ['name', 'short_name', 'region', 'markdown', 'parent']

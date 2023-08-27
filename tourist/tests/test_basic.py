@@ -215,6 +215,7 @@ def add_some_entities(test_app):
                                markdown='Some palace', id=1)
         tstore.db.session.add_all([world, country, metro, club, pool])
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
 
 def add_and_return_edit_granted_user(test_app):
@@ -269,6 +270,7 @@ def test_list(test_app):
         )
         tstore.db.session.add_all([metro])
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
     with test_app.test_client() as c:
         response = c.get('/tourist/list')
@@ -284,6 +286,7 @@ def test_club_with_bad_pool_link(test_app):
         club.markdown += " * [[badpoollink]]\n"
         tstore.db.session.add(club)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
     with test_app.test_client() as c:
         response = c.get('/tourist/place/metro')
@@ -393,6 +396,7 @@ def test_delete_pool(test_app):
         club.markdown = 'Club Foo has no pool'
         tstore.db.session.add(club)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
 
     with test_app.app_context(), test_app.test_client(user=user) as c:
         c.get('/tourist/delete/pool/1')  # GET to create the CSRF token
@@ -563,5 +567,6 @@ def test_add_delete_place_comment(test_app, mocker: MockerFixture):
         tstore.db.session.delete(place.child_clubs[0])
         tstore.db.session.delete(place)
         tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
         # Check that comment_id was implicitly deleted by cascade.
         assert tstore.PlaceComment.query.get(comment_id) is None

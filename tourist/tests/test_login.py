@@ -1,3 +1,4 @@
+import tourist
 from tourist.models import tstore
 from tourist.tests.conftest import no_expire_on_commit
 
@@ -13,6 +14,7 @@ def test_heavy(test_app):
         with no_expire_on_commit():
             tstore.db.session.add_all([world, au, user_plain, user_edit_granted])
             tstore.db.session.commit()
+            tourist.update_render_cache(tstore.db.session)
 
     with test_app.test_client() as c:
         response = c.get('/tourist/')

@@ -2,7 +2,10 @@ import csv
 import datetime
 import enum
 import io
+import itertools
 from typing import List, Mapping
+from typing import Type
+from typing import Union
 
 from sqlalchemy.util import IdentitySet
 
@@ -11,6 +14,7 @@ import cattrs
 import geojson
 from geoalchemy2.shape import to_shape
 
+from tourist import continuumutils
 from tourist.models import render
 from tourist.models import tstore
 
@@ -59,7 +63,23 @@ def _build_render_pool(orm_pool: tstore.Pool) -> render.Pool:
     )
 
 
-def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[str, render.ClubSource]) -> render.Place:
+def _build_changes(orm_entity: Union[tstore.Place, tstore.Club, tstore.Pool], versions:
+        continuumutils.VersionTables) -> (render.PlaceEntityChanges):
+    changes = render.PlaceEntityChanges(entity_name=orm_entity.name)
+
+    prev_v = None
+    for v in versions.get_object_history(orm_entity):
+        issued_at = versions.transaction_issued_at[v.transaction_id]
+        user_email = versions.transaction_user_email.get(v.transaction_id, None)
+        changes.changes.append(render.PlaceEntityChanges.Change(
+            timestamp=issued_at, user=user_email,
+            change=str(continuumutils.changeset(v, prev_v))))
+        prev_v = v
+    return changes
+
+
+def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[str,
+      render.ClubSource], versions: continuumutils.VersionTables) -> (render.Place):
     children_geojson = orm_place.children_geojson_features
     if children_geojson:
         geojson_children_collection = geojson.FeatureCollection(children_geojson)
@@ -106,8 +126,14 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
             recently_updated.append(render.RecentlyUpdated(
                 timestamp=source.sync_timestamp, path=place.path, place_name=place.name, source_name=source.name))
         recently_updated.sort(key=lambda ru: ru.timestamp, reverse=True)
+        entity_changes = None
     else:
         recently_updated = None
+        entity_changes = [_build_changes(orm_place, versions)]
+        for child in itertools.chain(orm_place.child_places, orm_place.child_pools,
+                                           orm_place.child_clubs):
+            entity_changes.append(_build_changes(child, versions))
+
 
     return render.Place(
         id=orm_place.id,
@@ -122,6 +148,7 @@ def _build_render_place(orm_place: tstore.Place, source_by_short_name: Mapping[s
         parents=parents,
         recently_updated=recently_updated,
         comments=comments,
+        changes=entity_changes,
     )
 
 
@@ -196,12 +223,6 @@ def _build_problems(all_places: List[tstore.Place], all_clubs: List[tstore.Club]
     return problems
 
 
-
-
-
-
-
-
 def yield_cache():
     def get_all(cls):
         all_objects = IdentitySet(cls.query.all()) | tstore.db.session.dirty | tstore.db.session.new
@@ -213,9 +234,11 @@ def yield_cache():
     all_pools: List[tstore.Pool] = get_all(tstore.Pool)
     all_sources: List[tstore.Source] = get_all(tstore.Source)
     source_by_short_name = {s.source_short_name: _build_render_club_source(s) for s in all_sources}
+    version_tables = continuumutils.VersionTables.make()
+    version_tables.populate()
 
     for place in all_places:
-        render_place = _build_render_place(place, source_by_short_name)
+        render_place = _build_render_place(place, source_by_short_name, version_tables)
         yield tstore.RenderCache(name=RenderName.PLACE_PREFIX.value + place.short_name,
                                      value_dict=cattrs.unstructure(render_place))
         if place.is_world:
