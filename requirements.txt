@@ -94,7 +94,7 @@ flask==2.3.2
     #   flask-pagedown
     #   flask-sqlalchemy
     #   flask-wtf
-flask-admin @ git+https://github.com/TomGoBravo/flask-admin@leaflet-control-geocoder-geoatileattributionurl
+flask-admin @ git+https://github.com/TomGoBravo/flask-admin@bab9d1b8c87f70296af51230645ee8ece09ca9e0
     # via -r requirements.in
 flask-dance==6.2.0
     # via -r requirements.in
