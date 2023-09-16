@@ -63,6 +63,7 @@
 {% endfor %}
 
 {% for pool in place.child_pools %}
+{% if current_user.edit_granted or pool.club_back_links %}
 <h3 id='{{ pool.short_name }}'>{{ pool.name }}
     {% if current_user.edit_granted -%}
     <a href="{{ url_for('pool.edit_view', id=pool.id) }}" title="Edit pool">✎</a>
@@ -79,6 +80,7 @@ Open <a href="https://www.google.com/maps/search/?api=1&query={{ pool.maps_point
    https://medium.com/@MRWwebDesign/responsive-images-the-sizes-attribute-and-unexpected-image-sizes-882a2eadb6db
 #}<img style="vertical-align: middle" width=32 height=32 src="/static/logo_maps_color.32x32.png" title="Google Maps"></a>
 {% else %}Please add pool location.{% endif %}
+{% endif -%}
 {% endfor %}
 </div>
 
