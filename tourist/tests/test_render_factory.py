@@ -1,3 +1,4 @@
+import geojson
 from geoalchemy2 import WKTElement
 
 import tourist
@@ -43,10 +44,37 @@ def test_geojson(test_app):
         tourist.update_render_cache(tstore.db.session)
 
     with test_app.app_context():
-        collection = render_factory._build_geojson_feature_collection(tstore.Place.query.all(),
-                                                                      tstore.Pool.query.all())
+        collection = geojson.loads(render_factory.get_string(
+            render_factory.RenderName.POOLS_GEOJSON))
 
     titles = set(f['properties']['title'] for f in collection['features'])
     # Check that the collection contains the pool with geometry and metro without a pool.
     assert titles == {'Pool Geo Ref', 'Metro No Pool'}
+
+
+def test_be_geojson(test_app):
+    with test_app.app_context():
+        world = tstore.Place(name='World', short_name='world', region=polygon1, markdown='')
+        country = tstore.Place(name='Belgium', short_name='be', parent=world, region=polygon1,
+                               markdown='')
+        metro_with_pool = tstore.Place(
+            name='Metro With Pool',
+            short_name='metro_with_pool',
+            parent=country,
+            region=polygon1,
+            markdown='',
+        )
+        poolgeoref = tstore.Pool(name='Pool Geo Ref', short_name='poolgeoref',
+                                 parent=metro_with_pool, markdown='', entrance=point1)
+        club = tstore.Club(name='Our Club', short_name='our_club', parent=metro_with_pool,
+                           markdown='plays at [[poolgeoref]]')
+        tstore.db.session.add_all([world, country, metro_with_pool, poolgeoref, club])
+        tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
+
+    with test_app.app_context():
+        collection = geojson.loads(render_factory.get_string(render_factory.RenderName.BE_GEOJSON))
+
+    titles = set(f['properties']['title'] for f in collection['features'])
+    assert titles == {'Our Club'}
 
