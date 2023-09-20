@@ -36,6 +36,11 @@ def home_view_func():
     return render_template("home.html", world=render_world, mapbox_access_token=mapbox_access_token())
 
 
+@tourist_bp.route("/place_map_iframe_be.html")
+def place_map_be():
+    return render_template("place_map_iframe_be.html", mapbox_access_token=mapbox_access_token())
+
+
 @tourist_bp.route("/place/<string:short_name>")
 def place_short_name(short_name):
     if short_name == 'world':
@@ -48,6 +53,11 @@ def place_short_name(short_name):
 @tourist_bp.route("/data/pools.geojson")
 def data_all_geojson():
     return render_factory.get_string(render_factory.RenderName.POOLS_GEOJSON)
+
+
+@tourist_bp.route("/data/place/be.geojson")
+def data_be_geojson():
+    return render_factory.get_string(render_factory.RenderName.BE_GEOJSON)
 
 
 @tourist_bp.route("/csv")
