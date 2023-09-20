@@ -289,10 +289,10 @@ def yield_cache():
                              value_str=geojson.dumps(geojson_feature_collection))
 
     be_place = tstore.Place.query.filter_by(short_name='be').first()
-    be_geojson_feature_collection = _build_be_geojson_feature_collection(be_place)
-
-    yield tstore.RenderCache(name=RenderName.BE_GEOJSON.value,
-                             value_str=geojson.dumps(be_geojson_feature_collection))
+    if be_place:
+        be_geojson_feature_collection = _build_be_geojson_feature_collection(be_place)
+        yield tstore.RenderCache(name=RenderName.BE_GEOJSON.value,
+                                 value_str=geojson.dumps(be_geojson_feature_collection))
 
     si = io.StringIO()
     cw = csv.DictWriter(si, extrasaction='ignore',
