@@ -3,10 +3,14 @@ import datetime
 import enum
 import io
 import itertools
+import logging
 from collections import defaultdict
 from typing import List, Mapping
 from typing import Type
 from typing import Union
+
+from more_itertools import one
+from shapely.geometry import mapping as shapely_mapping
 
 from sqlalchemy.util import IdentitySet
 
@@ -26,6 +30,7 @@ class RenderName(enum.Enum):
     PLACE_NAMES_WORLD = "/place_names_world"
     CSV_ALL = "/csv"
     POOLS_GEOJSON = "/pools.geojson"
+    BE_GEOJSON = "/be.geojson"
     PROBLEMS = "/problems_list"
 
 
@@ -191,6 +196,26 @@ def _build_geojson_feature_collection(all_places, all_pools):
     return geojson_feature_collection
 
 
+def _build_be_geojson_feature_collection(be_place: tstore.Place):
+    """Returns a GeoJSON FeatureCollection especially for belgiumuwh.be"""
+    geojson_features = []
+    for town in be_place.child_places:
+        polygon = to_shape(town.region)
+        clubs = list(town.child_clubs)
+        if len(clubs) == 1:
+            club = one(clubs)
+            geojson_features.append({
+                'type': 'Feature',
+                'properties': {'title': club.name},
+                'geometry': shapely_mapping(polygon.centroid),
+            })
+        else:
+            # TODO(TomGoBravo): Log this to something like sentry so it isn't buried in a log file.
+            logging.warning(f"Town {town.name} does not have one club")
+    geojson_feature_collection = geojson.FeatureCollection(geojson_features)
+    return geojson_feature_collection
+
+
 @attrs.frozen(order=True)
 class StatusDateClub:
     status_date: datetime.date = attrs.field(order=True)
@@ -262,6 +287,12 @@ def yield_cache():
 
     yield tstore.RenderCache(name=RenderName.POOLS_GEOJSON.value,
                              value_str=geojson.dumps(geojson_feature_collection))
+
+    be_place = tstore.Place.query.filter_by(short_name='be').first()
+    be_geojson_feature_collection = _build_be_geojson_feature_collection(be_place)
+
+    yield tstore.RenderCache(name=RenderName.BE_GEOJSON.value,
+                             value_str=geojson.dumps(be_geojson_feature_collection))
 
     si = io.StringIO()
     cw = csv.DictWriter(si, extrasaction='ignore',
