@@ -172,7 +172,8 @@ class Place(db.Model, Entity):
 
     @property
     def _pool_geojson_features(self) -> List[Dict]:
-        return [p.entrance_geojson_feature for p in self.child_pools if p.entrance_geojson_feature]
+        return [p.entrance_geojson_feature
+                for p in self.child_pools if p.has_entrance_and_club_back_links]
 
     @property
     def children_or_center_geojson_features(self) -> List[Dict]:
@@ -371,6 +372,10 @@ class Pool(db.Model, Entity):
                 'properties': {'title': self.name, 'path': self.path},
                 'geometry': shapely_mapping(to_shape(self.entrance)),
             }
+
+    @property
+    def has_entrance_and_club_back_links(self) -> bool:
+        return bool(self.entrance_geojson_feature) and bool(self.club_back_links)
 
     @property
     def entrance_shapely(self):
