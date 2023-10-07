@@ -94,7 +94,7 @@ flask==2.3.2
     #   flask-pagedown
     #   flask-sqlalchemy
     #   flask-wtf
-flask-admin @ git+https://github.com/TomGoBravo/flask-admin@bab9d1b8c87f70296af51230645ee8ece09ca9e0
+flask-admin @ git+https://github.com/TomGoBravo/flask-admin@efe274cc47f213503d8f94d8ca86cd47c63fcb41
     # via -r requirements.in
 flask-dance==6.2.0
     # via -r requirements.in
