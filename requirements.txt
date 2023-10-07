@@ -16,8 +16,9 @@ alembic==1.8.1
     # via
     #   flask-migrate
     #   prefect
-anyio==3.6.1
+anyio==3.7.1
     # via
+    #   fastapi
     #   httpcore
     #   prefect
     #   starlette
@@ -74,15 +75,16 @@ coolname==1.1.0
     # via prefect
 croniter==1.3.5
     # via prefect
-cryptography==41.0.3
+cryptography==41.0.4
     # via prefect
 docker==5.0.3
     # via prefect
 exceptiongroup==1.0.0rc9
     # via
+    #   anyio
     #   cattrs
     #   pytest
-fastapi==0.95.1
+fastapi==0.103.2
     # via prefect
 flask==2.3.2
     # via
@@ -94,7 +96,7 @@ flask==2.3.2
     #   flask-pagedown
     #   flask-sqlalchemy
     #   flask-wtf
-flask-admin @ git+https://github.com/TomGoBravo/flask-admin@bab9d1b8c87f70296af51230645ee8ece09ca9e0
+flask-admin @ git+https://github.com/TomGoBravo/flask-admin@efe274cc47f213503d8f94d8ca86cd47c63fcb41
     # via -r requirements.in
 flask-dance==6.2.0
     # via -r requirements.in
@@ -310,7 +312,7 @@ sqlalchemy-continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6
     # via -r requirements.in
 sqlalchemy-utils==0.38.2
     # via sqlalchemy-continuum
-starlette==0.26.1
+starlette==0.27.0
     # via fastapi
 text-unidecode==1.3
     # via python-slugify
@@ -322,14 +324,15 @@ tomli==2.0.0
     #   pytest
 typer==0.6.1
     # via prefect
-typing-extensions==4.0.1
+typing-extensions==4.8.0
     # via
     #   aiosqlite
+    #   fastapi
     #   prefect
     #   pydantic
 uritemplate==3.0.0
     # via -r requirements.in
-urllib3==1.26.7
+urllib3==2.0.6
     # via
     #   kubernetes
     #   requests
