@@ -30,7 +30,7 @@ async-timeout==4.0.2
     # via aiohttp
 asyncpg==0.26.0
     # via prefect
-attrs==21.4.0
+attrs==23.1.0
     # via
     #   -r requirements.in
     #   aiohttp
@@ -45,7 +45,7 @@ blinker==1.6.2
     #   flask
 cachetools==5.2.0
     # via google-auth
-cattrs==22.2.0
+cattrs==23.1.2
     # via -r requirements.in
 certifi==2023.7.22
     # via
@@ -327,12 +327,13 @@ typer==0.6.1
 typing-extensions==4.8.0
     # via
     #   aiosqlite
+    #   cattrs
     #   fastapi
     #   prefect
     #   pydantic
 uritemplate==3.0.0
     # via -r requirements.in
-urllib3==2.0.6
+urllib3==2.0.7
     # via
     #   kubernetes
     #   requests
