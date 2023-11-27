@@ -4,37 +4,31 @@
 #
 #    pip-compile
 #
-aiofiles==0.8.0
-    # via prefect
-aiohttp==3.8.5
-    # via prefect
-aiosignal==1.2.0
-    # via aiohttp
 aiosqlite==0.17.0
     # via prefect
 alembic==1.8.1
     # via
     #   flask-migrate
     #   prefect
+annotated-types==0.6.0
+    # via pydantic
 anyio==3.7.1
     # via
-    #   fastapi
     #   httpcore
     #   prefect
     #   starlette
-apprise==1.0.0
+apprise==1.6.0
     # via prefect
 asgi-lifespan==1.0.1
     # via prefect
-async-timeout==4.0.2
-    # via aiohttp
 asyncpg==0.26.0
     # via prefect
 attrs==23.1.0
     # via
     #   -r requirements.in
-    #   aiohttp
     #   cattrs
+    #   jsonschema
+    #   referencing
 beautifulsoup4==4.10.0
     # via
     #   -r requirements.in
@@ -49,6 +43,7 @@ cattrs==23.1.2
     # via -r requirements.in
 certifi==2023.7.22
     # via
+    #   apprise
     #   httpcore
     #   httpx
     #   kubernetes
@@ -56,9 +51,7 @@ certifi==2023.7.22
 cffi==1.15.1
     # via cryptography
 charset-normalizer==2.0.10
-    # via
-    #   aiohttp
-    #   requests
+    # via requests
 click==8.1.3
     # via
     #   apprise
@@ -77,15 +70,19 @@ croniter==1.3.5
     # via prefect
 cryptography==41.0.4
     # via prefect
+dateparser==1.2.0
+    # via prefect
+dnspython==2.4.2
+    # via email-validator
 docker==5.0.3
     # via prefect
+email-validator==2.1.0.post1
+    # via pydantic
 exceptiongroup==1.0.0rc9
     # via
     #   anyio
     #   cattrs
     #   pytest
-fastapi==0.103.2
-    # via prefect
 flask==2.3.2
     # via
     #   -r requirements.in
@@ -116,10 +113,6 @@ flask-wtf==1.1.1
     # via -r requirements.in
 freezegun==1.1.0
     # via -r requirements.in
-frozenlist==1.3.1
-    # via
-    #   aiohttp
-    #   aiosignal
 fsspec==2022.7.1
     # via prefect
 geoalchemy2==0.10.2
@@ -132,6 +125,8 @@ geopy==2.2.0
     # via -r requirements.in
 google-auth==2.10.0
     # via kubernetes
+graphviz==0.20.1
+    # via prefect
 greenlet==1.1.2
     # via sqlalchemy
 griffe==0.21.0
@@ -140,18 +135,28 @@ h11==0.12.0
     # via
     #   httpcore
     #   uvicorn
-httpcore==0.15.0
+h2==4.1.0
     # via httpx
-httpx==0.23.0
-    # via prefect
+hpack==4.0.0
+    # via h2
+httpcore==0.15.0
+    # via
+    #   httpx
+    #   prefect
+httpx[http2]==0.23.0
+    # via
+    #   httpx
+    #   prefect
 humanize==3.13.1
     # via -r requirements.in
+hyperframe==6.0.1
+    # via h2
 idna==2.8
     # via
     #   anyio
+    #   email-validator
     #   requests
     #   rfc3986
-    #   yarl
 iniconfig==1.1.1
     # via pytest
 itsdangerous==2.1.2
@@ -159,11 +164,17 @@ itsdangerous==2.1.2
     #   flask
     #   flask-wtf
 jinja2==3.1.2
-    # via flask
+    # via
+    #   flask
+    #   prefect
 jsonpatch==1.32
     # via prefect
 jsonpointer==2.3
     # via jsonpatch
+jsonschema==4.20.0
+    # via prefect
+jsonschema-specifications==2023.11.1
+    # via jsonschema
 kubernetes==24.2.0
     # via prefect
 mako==1.2.2
@@ -182,10 +193,6 @@ markupsafe==2.1.1
     #   wtforms
 more-itertools==6.0.0
     # via -r requirements.in
-multidict==6.0.2
-    # via
-    #   aiohttp
-    #   yarl
 oauthlib==3.0.1
     # via
     #   flask-dance
@@ -209,7 +216,7 @@ pluggy==1.0.0
     # via pytest
 polyline==1.3.2
     # via -r requirements.in
-prefect==2.4.1
+prefect==2.14.3
     # via -r requirements.in
 psycopg2-binary==2.9.3
     # via -r requirements.in
@@ -221,10 +228,12 @@ pyasn1-modules==0.2.8
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==1.9.2
+pydantic[email]==2.5.2
     # via
-    #   fastapi
     #   prefect
+    #   pydantic
+pydantic-core==2.14.5
+    # via pydantic
 pygments==2.16.1
     # via rich
 pyparsing==3.0.6
@@ -237,16 +246,20 @@ pytest-mock==3.10.0
     # via -r requirements.in
 python-akismet==0.4.3
     # via -r requirements.in
-python-dateutil==2.8.0
+python-dateutil==2.8.2
     # via
     #   croniter
+    #   dateparser
     #   freezegun
     #   kubernetes
     #   pendulum
+    #   prefect
 python-slugify==6.1.2
     # via prefect
 pytz==2022.2.1
-    # via prefect
+    # via
+    #   dateparser
+    #   prefect
 pytzdata==2020.1
     # via pendulum
 pyyaml==6.0
@@ -256,6 +269,12 @@ pyyaml==6.0
     #   prefect
 readchar==4.0.1
     # via prefect
+referencing==0.31.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+regex==2023.10.3
+    # via dateparser
 requests==2.31.0
     # via
     #   apprise
@@ -273,28 +292,38 @@ requests-oauthlib==1.3.0
 responses==0.19.0
     # via -r requirements.in
 rfc3986[idna2008]==1.5.0
-    # via httpx
+    # via
+    #   httpx
+    #   rfc3986
 rich==12.5.1
     # via prefect
+rpds-py==0.13.1
+    # via
+    #   jsonschema
+    #   referencing
 rsa==4.9
     # via google-auth
+ruamel-yaml==0.18.5
+    # via prefect
+ruamel-yaml-clib==0.2.8
+    # via ruamel-yaml
 shapely==1.8.4
     # via -r requirements.in
 six==1.16.0
     # via
-    #   apprise
     #   google-auth
     #   kubernetes
     #   markdownify
     #   polyline
     #   python-dateutil
     #   sqlalchemy-utils
-sniffio==1.2.0
+sniffio==1.3.0
     # via
     #   anyio
     #   asgi-lifespan
     #   httpcore
     #   httpx
+    #   prefect
 sortedcontainers==2.4.0
     # via -r requirements.in
 soupsieve==2.3.1
@@ -313,7 +342,7 @@ sqlalchemy-continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6
 sqlalchemy-utils==0.38.2
     # via sqlalchemy-continuum
 starlette==0.27.0
-    # via fastapi
+    # via prefect
 text-unidecode==1.3
     # via python-slugify
 toml==0.10.2
@@ -328,9 +357,13 @@ typing-extensions==4.8.0
     # via
     #   aiosqlite
     #   cattrs
-    #   fastapi
     #   prefect
     #   pydantic
+    #   pydantic-core
+tzlocal==5.2
+    # via dateparser
+ujson==5.8.0
+    # via prefect
 uritemplate==3.0.0
     # via -r requirements.in
 urllib3==2.0.7
@@ -346,6 +379,8 @@ websocket-client==1.3.3
     # via
     #   docker
     #   kubernetes
+websockets==11.0.3
+    # via prefect
 werkzeug==2.3.3
     # via
     #   flask
@@ -360,8 +395,6 @@ wtforms==2.3.3
     #   flask-admin
     #   flask-pagedown
     #   flask-wtf
-yarl==1.8.1
-    # via aiohttp
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
