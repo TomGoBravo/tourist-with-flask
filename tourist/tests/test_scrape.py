@@ -128,7 +128,43 @@ def test_group_distance():
     assert sorted(pool_names_by_group) == ['abcd', 'ef', 'g']
 
 
-def add_uk(test_app):
+def test_also_group_by_name_normal():
+    pools = [
+        [scrape.PoolFrozen(0, 0, 'test pool one ignored difference')],
+        [scrape.PoolFrozen(0, 1, 'test pool two'), scrape.PoolFrozen(0, 2, 'test pool two')],
+        [scrape.PoolFrozen(0, 3, 'test pool one')],
+        [scrape.PoolFrozen(0, 4, 'test pool three')],
+    ]
+
+    pools_out = scrape.also_group_by_name(pools, scrape.ProblemAccumulator(logger=None))
+
+    pool_lng_by_group = []
+    for group in pools_out:
+        pool_lng_by_group.append(''.join(sorted(str(p.longitude) for p in group)))
+    assert sorted(pool_lng_by_group) == ['03', '12', '4']
+
+
+def test_also_group_by_name_input_group_of_three():
+    pools = [
+        [scrape.PoolFrozen(0, 1, 'one'), scrape.PoolFrozen(0, 2, 'two'),
+         scrape.PoolFrozen(0, 3, 'three')],
+    ]
+
+    with pytest.raises(scrape.ScraperError, match="Expecting only groups of size 1 and 2"):
+        scrape.also_group_by_name(pools, scrape.ProblemAccumulator(logger=None))
+
+
+def test_also_group_by_name_three_with_similar_name():
+    pools = [
+        [scrape.PoolFrozen(0, 1, 'name one')], [scrape.PoolFrozen(0, 2, 'name one')],
+         [scrape.PoolFrozen(0, 3, 'name oneignoredpart')],
+    ]
+
+    with pytest.raises(scrape.ScraperError, match="3 pools with similar name"):
+        scrape.also_group_by_name(pools, scrape.ProblemAccumulator(logger=None))
+
+
+def add_uk(test_app, add_pools: bool = True):
     with test_app.app_context():
         world = tstore.Place(name='World', short_name='world', markdown='')
         uk = tstore.Place(name='United Kingdom', short_name='uk', parent=world,
@@ -140,14 +176,15 @@ def add_uk(test_app):
         london = tstore.Place(name='London', short_name='uklon', parent=uk,
                               region=WKTElement('POLYGON ((4.27 51.03, 4.27 59.56, -10.69 59.56, '
                                                 '-10.69 51.03, 4.27 51.03))', srid=4326))
-        poolden = tstore.Pool(name='Denton Wellness Center', short_name='denton', parent=north,
-                              markdown='', entrance=WKTElement('POINT(-2.1140 53.4575)',
-                                                               srid=4326))
-        poolgeo2 = tstore.Pool(name='Metro Pool', short_name='poolgeo2', parent=north,
-                               markdown='', entrance=WKTElement('POINT(5 45)', srid=4326))
-    #    pool = tstore.Pool(name='PoolNoGeo', short_name='poolnogeo', parent=north, markdown='')
+        tstore.db.session.add_all([world, uk, north, london])
 
-        tstore.db.session.add_all([world, uk, north, london, poolden, poolgeo2])
+        if add_pools:
+            poolden = tstore.Pool(name='Denton Wellness Center', short_name='denton', parent=north,
+                                  markdown='', entrance=WKTElement('POINT(-2.1140 53.4575)',
+                                                                   srid=4326))
+            poolgeo2 = tstore.Pool(name='Metro Pool', short_name='poolgeo2', parent=north,
+                                   markdown='', entrance=WKTElement('POINT(5 45)', srid=4326))
+            tstore.db.session.add_all([poolden, poolgeo2])
         tstore.db.session.commit()
         tourist.update_render_cache(tstore.db.session)
 
@@ -237,6 +274,47 @@ def test_extract_gbuwh_wrong_region(test_app):
         )
         with pytest.raises(scrape.PoolRegionChanged):
             scrape.extract_gbfeed(uk, feed, datetime(2022, 12, 25),  scrape.ProblemAccumulator(logger=None))
+
+
+def test_extract_gbuwh_change_location(test_app):
+    add_uk(test_app, add_pools=False)
+
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        feed1 = GbUwhFeed(
+            source=GbUwhFeed.Source(name='GBUWH', icon='https://www.gbuwh.co.uk/logo.svg'),
+            clubs=[
+                GbUwhFeed.Club(
+                    unique_id='c81e', name='Xarifa UWH', logo='https://www/xarifa-uwh.jpg',
+                    region='North', website='https://foo.com',
+                    sessions=[
+                        GbUwhFeed.ClubSession(
+                            day='thursday', latitude=53.4575, longitude=-2.114,
+                            location_name='Denton Wellness Center', type='adult',
+                            title='Manchester session',
+                            start_time='21:00:00', end_time='22:00:00')
+                    ]),
+            ]
+        )
+        scrape.extract_gbfeed(uk, feed1, datetime(2022, 12, 25),
+                              scrape.ProblemAccumulator(logger=None))
+
+    with test_app.app_context():
+        uk = one(tstore.Place.query.filter_by(short_name='uk').all())
+        # New feed with exact same data except the latitude changed to move location more than
+        # 200m. This used to break the import because the old pool was deleted and new inserted
+        # but sqlite raised an exception due to:
+        # (sqlite3.IntegrityError) UNIQUE constraint failed: pool.short_name
+        # Reach into feed1 and move the session location more than 200m. Kinda ugly but
+        # https://github.com/python-attrs/attrs/issues/932 is tricky.
+        feed2 = GbUwhFeed(
+            source=feed1.source,
+            clubs=[
+                attr.evolve(feed1.clubs[0], sessions=[
+                    attr.evolve(feed1.clubs[0].sessions[0], latitude=53.2575)])
+            ])
+        scrape.extract_gbfeed(uk, feed2, datetime(2022, 12, 25),
+                              scrape.ProblemAccumulator(logger=None))
 
 
 def test_extract_gbuwh_long(test_app):
