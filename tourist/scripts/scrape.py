@@ -53,47 +53,13 @@ from tourist.scripts import sync
 scrape_cli = AppGroup('scrape')
 
 
-class ScraperWarning(UserWarning):
-    pass
-
-
-class RegionNotFoundWarning(ScraperWarning):
-    pass
-
-
-class FeedContainsNonHttpsUrl(ScraperWarning):
-    pass
-
-
-class ScraperError(ValueError):
-    pass
-
-
-class PoolRegionChanged(ScraperError):
-    pass
-
-
-@attrs.frozen()
-class ProblemAccumulator:
-    logger: Optional[logging.Logger] = attrs.field(factory=prefect.get_run_logger)
-
-    def raise_(self, err: ScraperError):
-        raise err
-
-    def warn(self, msg: str, err_class: Type):
-        if self.logger:
-            self.logger.warning(msg)
-        else:
-            warnings.warn(msg, err_class)
-
-
 @pydantic_dataclass(frozen=True)
 class Source:
     """Scraper source configuration"""
     short_name: str
     url: str
     place_short_name: str
-    extractor: Callable[[tstore.Place, sstore.UrlFetch, ProblemAccumulator], List[sstore.EntityExtract]]
+    extractor: Callable[[tstore.Place, sstore.UrlFetch], List[sstore.EntityExtract]]
 
 
 # latitude, longitude: the order expected by geopy.distance. This is opposite the order used by
@@ -193,14 +159,8 @@ def fetch(session: sqlalchemy.orm.Session, sources: List[Source]):
 
 
 @scrape_cli.command('fetch')
-@click.option('--source_match', default=None, type=str)
-def fetch_command(source_match: Optional[str]):
-    if source_match:
-        sources = filter(lambda s: s.short_name == source_match, SOURCES)
-    else:
-        sources = SOURCES
-
-    fetch(make_session_from_flask_config(), sources)
+def fetch_command():
+    fetch(make_session_from_flask_config(), SOURCES)
 
 
 timestamp_str = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -301,7 +261,7 @@ def tstore_to_pools(tstore_pools: Iterable[tstore.Pool]) -> Iterable[PoolFrozen]
            'tstore', parent_id=p.parent.id, tstore_pool=p)])
 
 
-def extract_cuga(parent_place: tstore.Place, fetch: sstore.UrlFetch, problems: ProblemAccumulator) -> List[sstore.EntityExtract]:
+def extract_cuga(parent_place: tstore.Place, fetch: sstore.UrlFetch) -> List[sstore.EntityExtract]:
     place_searcher = PlaceSearcher(parent_place)
     markdownify_converter = MarkdownConverter()
     results = []
@@ -331,26 +291,7 @@ def extract_cuga(parent_place: tstore.Place, fetch: sstore.UrlFetch, problems: P
     return results
 
 
-def extract_belgiumuwh(parent_place: tstore.Place, fetch: sstore.UrlFetch, problems: ProblemAccumulator) -> List[
-    sstore.EntityExtract]:
-    markdownify_converter = MarkdownConverter(heading_style='atx')
-    result_md = []
-    soup = bs4.BeautifulSoup(fetch.response, 'html.parser')
-    for h3 in soup.find('main').find_all('h3'):
-        if re.match(r'^\w', h3.get_text()):
-            ul = h3.find_next('ul')
-            result_md.append((
-                    "# " + markdownify_converter.convert_soup(h3).strip() + '\n' +
-                    markdownify_converter.convert_soup(ul).strip()))
-    return [sstore.EntityExtract(
-        source_short_name=fetch.source_short_name,
-        url=fetch.url,
-        place_short_name=parent_place.short_name,
-        markdown_content='\n\n'.join(result_md),
-    )]
-
-
-def extract_sauwhf(parent_place: tstore.Place, fetch: sstore.UrlFetch, problems: ProblemAccumulator) -> List[
+def extract_sauwhf(parent_place: tstore.Place, fetch: sstore.UrlFetch) -> List[
     sstore.EntityExtract]:
     place_searcher = PlaceSearcher(parent_place)
     markdownify_converter = MarkdownConverter()
@@ -486,6 +427,40 @@ def pool_distances_m(pools: Iterable[PoolFrozen]) -> List[MetersPools]:
     for p1, p2 in itertools.combinations(pools, 2):
         distances.append(MetersPools.build(p1, p2))
     return distances
+
+
+class ScraperWarning(UserWarning):
+    pass
+
+
+class RegionNotFoundWarning(ScraperWarning):
+    pass
+
+
+class FeedContainsNonHttpsUrl(ScraperWarning):
+    pass
+
+
+class ScraperError(ValueError):
+    pass
+
+
+class PoolRegionChanged(ScraperError):
+    pass
+
+
+@attrs.frozen()
+class ProblemAccumulator:
+    logger: Optional[logging.Logger] = attrs.field(factory=prefect.get_run_logger)
+
+    def raise_(self, err: ScraperError):
+        raise err
+
+    def warn(self, msg: str, err_class: Type):
+        if self.logger:
+            self.logger.warning(msg)
+        else:
+            warnings.warn(msg, err_class)
 
 
 def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch, problems: Optional[
@@ -795,7 +770,6 @@ SOURCES = [
     Source("sauwhf", "https://sauwhf.co.za/clubs/", "za", extract_sauwhf),
     Source("gbuwh-feed-clubs", "https://www.gbuwh.co.uk/feeds/clubs", "uk",
            parse_and_extract_gbfeed),
-    Source("belgiumuwh", "https://www.belgiumuwh.be/clubs-in-belgium/", "be", extract_belgiumuwh)
 ]
 
 SOURCE_BY_SHORT_NAME = {source.short_name: source for source in SOURCES}
@@ -809,11 +783,10 @@ def extract():
     world_place = tstore.Place.query.filter_by(short_name='world').one()
     world_place_searcher = PlaceSearcher(world_place)
     utc_now = datetime.utcnow()
-    problems = ProblemAccumulator(logger=None)
     for fetch in session.query(sstore.UrlFetch).filter_by(extract_timestamp=None).all():
         source = SOURCE_BY_SHORT_NAME[fetch.source_short_name]
         parent_place = world_place_searcher.find_by_short_name(source.place_short_name)
-        for extract in source.extractor(parent_place, fetch, problems):
+        for extract in source.extractor(parent_place, fetch):
             prev_extract = session.query(sstore.EntityExtract).filter_by(
                 url=extract.url, place_short_name=extract.place_short_name).order_by(
                 sstore.EntityExtract.created_timestamp.desc()).first()
