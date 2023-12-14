@@ -30,6 +30,7 @@ import geoalchemy2.shape
 import geopy.point
 import geopy.distance
 import prefect
+import prefect.exceptions
 import shapely.geometry
 import sqlalchemy.orm
 import sqlalchemy.orm.exc
@@ -451,7 +452,16 @@ class PoolRegionChanged(ScraperError):
 
 @attrs.frozen()
 class ProblemAccumulator:
-    logger: Optional[logging.Logger] = attrs.field(factory=prefect.get_run_logger)
+    logger: Optional[logging.Logger]
+
+    @classmethod
+    def factory(cls) -> "ProblemAccumulator":
+        logger = None
+        try:
+            logger = prefect.get_run_logger()
+        except prefect.exceptions.MissingContextError:
+            pass
+        return cls(logger=logger)
 
     def raise_(self, err: ScraperError):
         raise err
@@ -468,7 +478,7 @@ def parse_and_extract_gbfeed(uk_place: tstore.Place, fetch: sstore.UrlFetch, pro
     fetch_json = json.loads(fetch.response)
     feed: GbUwhFeed = gbuwhfeed_converter.structure(fetch_json, GbUwhFeed)
     if not problems:
-        problems = ProblemAccumulator()
+        problems = ProblemAccumulator.factory()
     return extract_gbfeed(uk_place, feed, fetch.unmodified_timestamp, problems)
 
 
@@ -693,9 +703,16 @@ def extract_gbfeed(uk_place: tstore.Place, feed: GbUwhFeed, fetch_timestamp: dat
 
     # Now cluster the unique pools in the feed with the pools in the tstore database.
     orm_tstore_pools = list(place_searcher.get_all_pools())
+    # Check that orm_tstore_pools doesn't already have pools with similar names
+    check_for_similar_names_in_different_groups(([p,] for p in orm_tstore_pools), problems)
+
     # This call to `group_by_distance` is expected to return groups with no more than one pool
     # from feed_unique_pools and no more than one pool from orm_tstore_pools.
     grouped_union_of_pools = group_by_distance([*orm_tstore_pools, *feed_unique_pools], 200)
+
+    grouped_union_of_pools = also_group_by_name(grouped_union_of_pools, problems)
+
+    check_for_similar_names_in_different_groups(grouped_union_of_pools, problems)
 
     # Add/delete/update the tstore database to be in sync with feed_unique_pools.
     pool_sync = gbuwh_sync_pools(gbsource, grouped_union_of_pools, problems)
@@ -762,6 +779,37 @@ def check_for_similar_names_in_different_groups(pools_grouped_by_distance, probl
                                          f"{pool_distance}"))
         for pool in pool_group:
             name_prefix_to_pool[pool.name_prefix] = pool
+
+
+def also_group_by_name(pool_groups_in: List[List[PoolFrozen]], problems: ProblemAccumulator
+                       ) -> List[List[PoolFrozen]]:
+    """Expects input to have only groups of 1 or 2 pools. For pools in a group of 1, group similar
+    names."""
+    groups_by_len = defaultdict(list)
+    for pool_group in pool_groups_in:
+        groups_by_len[len(pool_group)].append(pool_group)
+
+    unexpected_group_sizes = set(groups_by_len.keys()) - {1, 2}
+    if unexpected_group_sizes:
+        problems.raise_(ScraperError(
+            f"Expecting only groups of size 1 and 2, found: {unexpected_group_sizes}"))
+
+    pool_groups_out: List[List[PoolFrozen]] = groups_by_len[2]
+
+    solo_pools: List[PoolFrozen] = [one(solo_group) for solo_group in groups_by_len[1]]
+    solos_by_name = defaultdict(list)
+    for pool in solo_pools:
+        solos_by_name[pool.name_prefix].append(pool)
+
+    for name, pools in solos_by_name.items():
+        if len(pools) == 1:
+            pool_groups_out.append(pools)
+        elif len(pools) == 2:
+            pool_groups_out.append(pools)
+        else:
+            problems.raise_(ScraperError(f"Group of 3 pools with similar name: {pools}"))
+
+    return pool_groups_out
 
 
 # Source values in SOURCES are closely related to rows in the tstore.Source table.
