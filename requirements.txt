@@ -68,7 +68,7 @@ coolname==1.1.0
     # via prefect
 croniter==1.3.5
     # via prefect
-cryptography==41.0.7
+cryptography==42.0.2
     # via prefect
 dateparser==1.2.0
     # via prefect
@@ -144,7 +144,9 @@ httpcore==0.15.0
     #   httpx
     #   prefect
 httpx[http2]==0.23.0
-    # via prefect
+    # via
+    #   httpx
+    #   prefect
 humanize==3.13.1
     # via -r requirements.in
 hyperframe==6.0.1
@@ -227,7 +229,9 @@ pyasn1-modules==0.2.8
 pycparser==2.21
     # via cffi
 pydantic[email]==2.5.2
-    # via prefect
+    # via
+    #   prefect
+    #   pydantic
 pydantic-core==2.14.5
     # via pydantic
 pygments==2.16.1
@@ -288,7 +292,9 @@ requests-oauthlib==1.3.0
 responses==0.19.0
     # via -r requirements.in
 rfc3986[idna2008]==1.5.0
-    # via httpx
+    # via
+    #   httpx
+    #   rfc3986
 rich==12.5.1
     # via prefect
 rpds-py==0.13.1
@@ -297,10 +303,10 @@ rpds-py==0.13.1
     #   referencing
 rsa==4.9
     # via google-auth
-ruamel.yaml==0.18.5
+ruamel-yaml==0.18.5
     # via prefect
-ruamel.yaml.clib==0.2.8
-    # via ruamel.yaml
+ruamel-yaml-clib==0.2.8
+    # via ruamel-yaml
 shapely==1.8.4
     # via -r requirements.in
 six==1.16.0
