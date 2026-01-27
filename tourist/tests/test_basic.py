@@ -294,6 +294,17 @@ def test_club_with_bad_pool_link(test_app):
         assert 'Foo Club plays' in response.get_data(as_text=True)
 
 
+def test_update_render_cache_after_deleting_place_with_pool(test_app):
+    # Reproduces problem where place was deleted, leaving pool with invalid parent_id and breaking update_render_cache.
+    add_some_entities(test_app)
+    place_id = 3
+    with test_app.app_context():
+        place = tstore.Place.query.get(place_id)
+        tstore.db.session.delete(place)
+        tstore.db.session.commit()
+        tourist.update_render_cache(tstore.db.session)
+
+
 def test_delete_club(test_app):
     add_some_entities(test_app)
     user = add_and_return_edit_granted_user(test_app)
