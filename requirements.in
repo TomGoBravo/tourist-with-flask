@@ -46,3 +46,4 @@ prefect
 freezegun
 responses
 pytest-mock
+testfixtures
