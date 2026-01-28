@@ -152,9 +152,14 @@ def create_app(config_object: Optional[tourist.config.BaseConfig] = None):
 
 def update_render_cache(session):
     new_cache_ids = []
-    for new_cache in render_factory.yield_cache():
-        session.add(new_cache)
-        new_cache_ids.append(new_cache.name)
+    try:
+        new_cache = list(render_factory.yield_cache())
+    except (ValueError, AttributeError):
+        current_app.logger.exception("Exception in render factory. Update of rendered site DISABLED.")
+        return
+    for new_cache_item in new_cache:
+        session.add(new_cache_item)
+        new_cache_ids.append(new_cache_item.name)
     # Remove rows in RenderCache not in new_cache_ids. This should be removed places.
     session.query(tstore.RenderCache).filter(tstore.RenderCache.name.notin_(new_cache_ids)).delete()
     session.commit()

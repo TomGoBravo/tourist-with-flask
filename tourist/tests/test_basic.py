@@ -1,4 +1,5 @@
 import datetime
+import logging
 from pprint import pprint
 
 import flask
@@ -7,6 +8,7 @@ from geoalchemy2 import WKTElement
 from more_itertools import one
 from pytest import approx
 from pytest_mock import MockerFixture
+from testfixtures import LogCapture
 
 import tourist.models.render
 from tourist import render_factory
@@ -292,6 +294,20 @@ def test_club_with_bad_pool_link(test_app):
         response = c.get('/tourist/place/metro')
         assert response.status_code == 200
         assert 'Foo Club plays' in response.get_data(as_text=True)
+
+
+def test_update_render_cache_after_deleting_place_with_pool(test_app):
+    # Reproduces problem where place was deleted, leaving pool with invalid parent_id and breaking update_render_cache.
+    # This is a hack fix. It'd be much better to prevent the place being deleted while it has children.
+    add_some_entities(test_app)
+    place_id = 3
+    with test_app.app_context():
+        place = tstore.Place.query.get(place_id)
+        tstore.db.session.delete(place)
+        tstore.db.session.commit()
+        with LogCapture() as l:
+            tourist.update_render_cache(tstore.db.session)
+        l.check(('tourist', 'ERROR', 'Exception in render factory. Update of rendered site DISABLED.'))
 
 
 def test_delete_club(test_app):
