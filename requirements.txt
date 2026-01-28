@@ -16,7 +16,6 @@ anyio==3.7.1
     # via
     #   httpcore
     #   prefect
-    #   starlette
 apprise==1.6.0
     # via prefect
 asgi-lifespan==1.0.1
@@ -37,8 +36,10 @@ blinker==1.6.2
     # via
     #   -r requirements.in
     #   flask
-cachetools==5.2.0
-    # via google-auth
+cachetools==5.3.3
+    # via
+    #   google-auth
+    #   prefect
 cattrs==23.1.2
     # via -r requirements.in
 certifi==2023.7.22
@@ -155,12 +156,15 @@ idna==2.8
     #   email-validator
     #   requests
     #   rfc3986
+importlib-resources==6.1.3
+    # via prefect
 iniconfig==1.1.1
     # via pytest
 itsdangerous==2.1.2
     # via
     #   flask
     #   flask-wtf
+    #   prefect
 jinja2==3.1.3
     # via
     #   flask
@@ -214,7 +218,7 @@ pluggy==1.0.0
     # via pytest
 polyline==1.3.2
     # via -r requirements.in
-prefect==2.14.6
+prefect==2.16.6
     # via -r requirements.in
 psycopg2-binary==2.9.3
     # via -r requirements.in
@@ -250,6 +254,8 @@ python-dateutil==2.8.2
     #   kubernetes
     #   pendulum
     #   prefect
+python-multipart==0.0.9
+    # via prefect
 python-slugify==6.1.2
     # via prefect
 pytz==2022.2.1
@@ -287,6 +293,8 @@ requests-oauthlib==1.3.0
     #   kubernetes
 responses==0.19.0
     # via -r requirements.in
+rfc3339-validator==0.1.4
+    # via prefect
 rfc3986[idna2008]==1.5.0
     # via httpx
 rich==12.5.1
@@ -310,6 +318,7 @@ six==1.16.0
     #   markdownify
     #   polyline
     #   python-dateutil
+    #   rfc3339-validator
     #   sqlalchemy-utils
 sniffio==1.3.0
     # via
@@ -335,8 +344,6 @@ sqlalchemy-continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6
     # via -r requirements.in
 sqlalchemy-utils==0.38.2
     # via sqlalchemy-continuum
-starlette==0.27.0
-    # via prefect
 testfixtures==8.3.0
     # via -r requirements.in
 text-unidecode==1.3
