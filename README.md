@@ -41,11 +41,11 @@ Use this method if you are changing the dependencies or manually making a docker
 First install [pyenv](https://github.com/pyenv/pyenv). Don't miss [pyenv Common-build-problems](https://github.com/pyenv/pyenv/wiki/Common-build-problems). Then try the following which works in debian 11:
 
 ```
-PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.10.7
-pyenv virtualenv 3.10.7 tourist-3.10.7
-pyenv activate tourist-3.10.7
-python -m pip install pip==21.3  # Work around for https://github.com/jazzband/pip-tools/issues/1639
-python -m pip install pip-tools
+PYTHON_CONFIGURE_OPTS="--enable-loadable-sqlite-extensions" pyenv install 3.10.19
+pyenv virtualenv 3.10.19 tourist-3.10.19
+pyenv activate tourist-3.10.19
+python -m pip install pip==25.3
+python -m pip install pip-tools==7.5.2
 pip-sync
 
 # Run tests
