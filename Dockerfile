@@ -2,7 +2,7 @@
 # and https://github.com/microsoft/vscode-dev-containers/issues/304#issue-608331752 (for builder and production multi-stage docker images)
 
 # start by pulling the python image
-FROM python:3.10.7-buster AS builder
+FROM python:3.10.19-bookworm AS builder
 
 # From https://docs.github.com/en/enterprise-server@3.8/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
 LABEL org.opencontainers.image.source=https://github.com/TomGoBravo/tourist-with-flask
@@ -27,7 +27,7 @@ RUN chmod --recursive a+r /app
 
 
 
-FROM python:3.10.7-slim-buster AS production
+FROM python:3.10.19-slim-bookworm AS production
 
 # From https://docs.github.com/en/enterprise-server@3.8/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
 LABEL org.opencontainers.image.source=https://github.com/TomGoBravo/tourist-with-flask
