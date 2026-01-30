@@ -12,11 +12,11 @@ alembic==1.8.1
     #   prefect
 annotated-types==0.6.0
     # via pydantic
-anyio==3.7.1
+anyio==4.12.1
     # via
-    #   httpcore
+    #   httpx
     #   prefect
-apprise==1.6.0
+apprise==1.9.7
     # via prefect
 asgi-lifespan==1.0.1
     # via prefect
@@ -65,6 +65,8 @@ click==8.1.3
     #   uvicorn
 cloudpickle==2.1.0
     # via prefect
+colorama==0.4.6
+    # via griffe
 commonmark==0.9.1
     # via rich
 coolname==1.1.0
@@ -81,10 +83,11 @@ docker==5.0.3
     # via prefect
 email-validator==2.1.0.post1
     # via pydantic
-exceptiongroup==1.0.0rc9
+exceptiongroup==1.3.1
     # via
     #   anyio
     #   cattrs
+    #   prefect
     #   pytest
 flask==2.3.2
     # via
@@ -132,9 +135,9 @@ graphviz==0.20.1
     # via prefect
 greenlet==3.3.1
     # via sqlalchemy
-griffe==0.21.0
+griffe==1.15.0
     # via prefect
-h11==0.12.0
+h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
@@ -142,22 +145,25 @@ h2==4.1.0
     # via httpx
 hpack==4.0.0
     # via h2
-httpcore==0.15.0
+httpcore==1.0.9
     # via
     #   httpx
     #   prefect
-httpx[http2]==0.23.0
+httpx[http2]==0.28.1
     # via prefect
-humanize==3.13.1
-    # via -r requirements.in
+humanize==4.15.0
+    # via
+    #   -r requirements.in
+    #   jinja2-humanize-extension
+    #   prefect
 hyperframe==6.0.1
     # via h2
 idna==2.8
     # via
     #   anyio
     #   email-validator
+    #   httpx
     #   requests
-    #   rfc3986
 importlib-resources==6.1.3
     # via prefect
 iniconfig==1.1.1
@@ -170,7 +176,10 @@ itsdangerous==2.1.2
 jinja2==3.1.3
     # via
     #   flask
+    #   jinja2-humanize-extension
     #   prefect
+jinja2-humanize-extension==0.4.0
+    # via prefect
 jsonpatch==1.32
     # via prefect
 jsonpointer==2.3
@@ -219,7 +228,7 @@ pluggy==1.0.0
     # via pytest
 polyline==1.3.2
     # via -r requirements.in
-prefect==2.16.6
+prefect==2.20.25
     # via -r requirements.in
 psycopg2-binary==2.9.3
     # via -r requirements.in
@@ -234,7 +243,9 @@ pycparser==2.21
 pydantic[email]==2.5.2
     # via prefect
 pydantic-core==2.14.5
-    # via pydantic
+    # via
+    #   prefect
+    #   pydantic
 pygments==2.16.1
     # via rich
 pyproject-hooks==1.2.0
@@ -298,10 +309,10 @@ responses==0.19.0
     # via -r requirements.in
 rfc3339-validator==0.1.4
     # via prefect
-rfc3986[idna2008]==1.5.0
-    # via httpx
 rich==12.5.1
-    # via prefect
+    # via
+    #   prefect
+    #   typer
 rpds-py==0.13.1
     # via
     #   jsonschema
@@ -314,6 +325,8 @@ ruamel-yaml-clib==0.2.8
     # via ruamel-yaml
 shapely==1.8.4
     # via -r requirements.in
+shellingham==1.5.4
+    # via typer
 six==1.16.0
     # via
     #   google-auth
@@ -324,10 +337,7 @@ six==1.16.0
     #   rfc3339-validator
 sniffio==1.3.0
     # via
-    #   anyio
     #   asgi-lifespan
-    #   httpcore
-    #   httpx
     #   prefect
 sortedcontainers==2.4.0
     # via -r requirements.in
@@ -354,15 +364,18 @@ tomli==2.0.0
     #   build
     #   pip-tools
     #   pytest
-typer==0.6.1
+typer==0.17.5
     # via prefect
 typing-extensions==4.8.0
     # via
     #   aiosqlite
+    #   anyio
     #   cattrs
+    #   exceptiongroup
     #   prefect
     #   pydantic
     #   pydantic-core
+    #   typer
 tzlocal==5.2
     # via dateparser
 ujson==5.8.0
