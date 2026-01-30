@@ -106,7 +106,7 @@ flask-migrate==2.4.0
     # via -r requirements.in
 flask-pagedown==0.4.0
     # via -r requirements.in
-flask-sqlalchemy==3.0.3
+flask-sqlalchemy==3.0.5
     # via
     #   -r requirements.in
     #   flask-migrate
@@ -116,7 +116,7 @@ freezegun==1.1.0
     # via -r requirements.in
 fsspec==2022.7.1
     # via prefect
-geoalchemy2==0.10.2
+geoalchemy2==0.12.2
     # via -r requirements.in
 geographiclib==1.52
     # via geopy
@@ -329,7 +329,7 @@ sortedcontainers==2.4.0
     # via -r requirements.in
 soupsieve==2.3.1
     # via beautifulsoup4
-sqlalchemy[asyncio]==1.4.31
+sqlalchemy[asyncio]==1.4.54
     # via
     #   -r requirements.in
     #   alembic
@@ -338,9 +338,9 @@ sqlalchemy[asyncio]==1.4.31
     #   prefect
     #   sqlalchemy-continuum
     #   sqlalchemy-utils
-sqlalchemy-continuum @ git+https://github.com/kvesteri/sqlalchemy-continuum@a7a6bd7952185b1f82af985c0271834d886a617c
+sqlalchemy-continuum==1.5.2
     # via -r requirements.in
-sqlalchemy-utils==0.38.2
+sqlalchemy-utils==0.42.1
     # via sqlalchemy-continuum
 testfixtures==8.3.0
     # via -r requirements.in
