@@ -7,9 +7,9 @@
 
 attrs
 cattrs
-# Using a branch with my work-around until https://github.com/flask-admin/flask-admin/issues/2351 is fixed with
-# additional fix for https://github.com/flask-admin/flask-admin/issues/1929 merged in.
-flask-admin @ git+https://github.com/TomGoBravo/flask-admin@efe274cc47f213503d8f94d8ca86cd47c63fcb41
+# Hold back from upgrading major version for now. Name search bug
+# https://github.com/flask-admin/flask-admin/issues/1929 isn't fixed but it broken behaviour isn't happening in dev.
+flask-admin==1.6.1
 geojson>=2.4.1
 
 # Use head as of 2023-08-27 to get fix for https://github.com/kvesteri/sqlalchemy-continuum/issues/322 because it
